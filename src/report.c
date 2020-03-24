@@ -55,8 +55,20 @@ Return Value:
 
 	status = STATUS_SUCCESS;
 
-	FOCAL_TECH_EVENT_DATA event_data = { 0 };
-	status = SpbReadDataSynchronously(SpbContext, 0, &event_data, sizeof(FOCAL_TECH_EVENT_DATA));
+	PFOCAL_TECH_EVENT_DATA event_data;
+
+	event_data = ExAllocatePoolWithTag(
+		NonPagedPool,
+		sizeof(FOCAL_TECH_EVENT_DATA),
+		TOUCH_POOL_TAG);
+
+	if (event_data == NULL)
+	{
+		status = STATUS_INSUFFICIENT_RESOURCES;
+		goto exit;
+	}
+
+	status = SpbReadDataSynchronously(SpbContext, 0, event_data, sizeof(FOCAL_TECH_EVENT_DATA));
 
 	if (!NT_SUCCESS(status))
 	{
@@ -67,16 +79,16 @@ Return Value:
 			status
 		);
 
-		goto exit;
+		goto free_buffer;
 	}
 
 	//
 	// If no touches are present return that no data needed to be reported
 	//
-	if (event_data.NumberOfTouchPoints == 0)
+	if (event_data->NumberOfTouchPoints == 0)
 	{
 		status = STATUS_NO_DATA_DETECTED;
-		goto exit;
+		goto free_buffer;
 	}
 
 	//
@@ -90,7 +102,7 @@ Return Value:
 			"Unable to report touches, only multitouch mode is supported");
 
 		status = STATUS_NOT_IMPLEMENTED;
-		goto exit;
+		goto free_buffer;
 	}
 
 	//
@@ -107,7 +119,7 @@ Return Value:
 				"can't get report queue slot [fillHidReport(touches)], status: %x",
 				status
 			);
-			goto exit;
+			goto free_buffer;
 		}
 		hidReport->ReportID = REPORTID_MTOUCH;
 
@@ -126,14 +138,14 @@ Return Value:
 		// The first report will have the TouchesReported integer set to 0
 		// The others will have it set to something else.
 		//
-		hidTouch->InputReport.ActualCount = event_data.NumberOfTouchPoints;
+		hidTouch->InputReport.ActualCount = event_data->NumberOfTouchPoints;
 
-		for (int i = 0; i < event_data.NumberOfTouchPoints; i++)
+		for (int i = 0; i < event_data->NumberOfTouchPoints; i++)
 		{
 			hidTouch->InputReport.Contacts[i].ContactId = (UCHAR)i;
 
-			USHORT SctatchX = event_data.TouchData[i].PositionX_Low | (event_data.TouchData[i].PositionX_High << 8);
-			USHORT ScratchY = event_data.TouchData[i].PositionY_Low | (event_data.TouchData[i].PositionY_High << 8);
+			USHORT SctatchX = event_data->TouchData[i].PositionX_Low | (event_data->TouchData[i].PositionX_High << 8);
+			USHORT ScratchY = event_data->TouchData[i].PositionY_Low | (event_data->TouchData[i].PositionY_High << 8);
 
 			//
 			// Perform per-platform x/y adjustments to controller coordinates
@@ -162,6 +174,12 @@ Return Value:
 #endif
 		}
 	}
+
+free_buffer:
+	ExFreePoolWithTag(
+		event_data,
+		TOUCH_POOL_TAG
+	);
 
 	//
 	// Update the caller if we still have outstanding touches to report
