@@ -1,30 +1,13 @@
-/*++
-	Copyright (c) Microsoft Corporation. All Rights Reserved.
-	Sample code. Dealpoint ID #843729.
+// Copyright (c) Microsoft Corporation. All Rights Reserved. 
+// Copyright (c) Bingxing Wang. All Rights Reserved. 
 
-	Module Name:
-
-		device.c
-
-	Abstract:
-
-		Code for handling WDF device-specific requests
-
-	Environment:
-
-		Kernel mode
-
-	Revision History:
-
---*/
-
-#include "internal.h"
-#include "controller.h"
-#include "device.h"
-#include "spb.h"
-#include "idle.h"
-#include "debug.h"
-//#include "device.tmh"
+#include <internal.h>
+#include <controller.h>
+#include <device.h>
+#include <spb.h>
+#include <idle.h>
+#include <hid.h>
+#include <device.tmh>
 
 #ifdef ALLOC_PRAGMA
 #pragma alloc_text(PAGE, OnD0Exit)
@@ -62,7 +45,7 @@ OnInterruptIsr(
 	NTSTATUS status;
 	BOOLEAN servicingComplete;
 	PHID_INPUT_REPORT hidReportsFromDriver;
-    int hidReportsCount = 0;
+	int hidReportsCount = 0;
 
 	UNREFERENCED_PARAMETER(MessageID);
 
@@ -79,27 +62,27 @@ OnInterruptIsr(
 	// to complete to Hid. ServicingComplete indicates another report
 	// is required to continue servicing this interrupt.
 	//
-    status = TchServiceInterrupts(
-        devContext->TouchContext,
-        &devContext->I2CContext,
-        devContext->InputMode,
-        &hidReportsFromDriver,
-        &hidReportsCount
-    );
+	status = TchServiceInterrupts(
+		devContext->TouchContext,
+		&devContext->I2CContext,
+		devContext->InputMode,
+		&hidReportsFromDriver,
+		&hidReportsCount
+	);
 
 	if (!NT_SUCCESS(status))
 	{
 		//
 		// error on interupt servicing
 		//
-        goto exit;
+		goto exit;
 	}
 
-    SendHidReports(
-        devContext->PingPongQueue,
-        hidReportsFromDriver,
-        hidReportsCount
-    );
+	SendHidReports(
+		devContext->PingPongQueue,
+		hidReportsFromDriver,
+		hidReportsCount
+	);
 
 exit:
 	return TRUE;
@@ -107,82 +90,82 @@ exit:
 
 void
 SendHidReports(
-    WDFQUEUE PingPongQueue,
-    PHID_INPUT_REPORT hidReportsFromDriver,
-    int hidReportsCount
+	WDFQUEUE PingPongQueue,
+	PHID_INPUT_REPORT hidReportsFromDriver,
+	int hidReportsCount
 )
 {
-    NTSTATUS status;
-    WDFREQUEST request = NULL;
-    PHID_INPUT_REPORT hidReportRequestBuffer;
-    size_t hidReportRequestBufferLength;
+	NTSTATUS status;
+	WDFREQUEST request = NULL;
+	PHID_INPUT_REPORT hidReportRequestBuffer;
+	size_t hidReportRequestBufferLength;
 
-    for(int i = 0; i < hidReportsCount; i++)
-    {
-        //
-        // Complete a HIDClass request if one is available
-        //
-        status = WdfIoQueueRetrieveNextRequest(
-            PingPongQueue,
-            &request);
+	for (int i = 0; i < hidReportsCount; i++)
+	{
+		//
+		// Complete a HIDClass request if one is available
+		//
+		status = WdfIoQueueRetrieveNextRequest(
+			PingPongQueue,
+			&request);
 
-        if(!NT_SUCCESS(status))
-        {
-            Trace(
-                TRACE_LEVEL_ERROR,
-                TRACE_FLAG_REPORTING,
-                "No request pending from HIDClass, ignoring report - STATUS:%X",
-                status);
+		if (!NT_SUCCESS(status))
+		{
+			Trace(
+				TRACE_LEVEL_ERROR,
+				TRACE_REPORTING,
+				"No request pending from HIDClass, ignoring report - STATUS:%X",
+				status);
 
-            continue;
-        }
+			continue;
+		}
 
-        //
-        // Validate an output buffer was provided
-        //
-        status = WdfRequestRetrieveOutputBuffer(
-            request,
-            sizeof(HID_INPUT_REPORT),
-            &hidReportRequestBuffer,
-            &hidReportRequestBufferLength);
+		//
+		// Validate an output buffer was provided
+		//
+		status = WdfRequestRetrieveOutputBuffer(
+			request,
+			sizeof(HID_INPUT_REPORT),
+			&hidReportRequestBuffer,
+			&hidReportRequestBufferLength);
 
-        if(!NT_SUCCESS(status))
-        {
-            Trace(
-                TRACE_LEVEL_WARNING,
-                TRACE_FLAG_SAMPLES,
-                "Error retrieving HID read request output buffer - STATUS:%X",
-                status);
-        }
-        else
-        {
-            //
-            // Validate the size of the output buffer
-            //
-            if(hidReportRequestBufferLength < sizeof(HID_INPUT_REPORT))
-            {
-                status = STATUS_BUFFER_TOO_SMALL;
+		if (!NT_SUCCESS(status))
+		{
+			Trace(
+				TRACE_LEVEL_WARNING,
+				TRACE_SAMPLES,
+				"Error retrieving HID read request output buffer - STATUS:%X",
+				status);
+		}
+		else
+		{
+			//
+			// Validate the size of the output buffer
+			//
+			if (hidReportRequestBufferLength < sizeof(HID_INPUT_REPORT))
+			{
+				status = STATUS_BUFFER_TOO_SMALL;
 
-                Trace(
-                    TRACE_LEVEL_WARNING,
-                    TRACE_FLAG_SAMPLES,
-                    "Error HID read request buffer is too small (%lu bytes) - STATUS:%X",
-                    hidReportRequestBufferLength,
-                    status);
-            }
-            else
-            {
-                RtlCopyMemory(
-                    hidReportRequestBuffer,
-                    &hidReportsFromDriver[i],
-                    sizeof(HID_INPUT_REPORT));
+				Trace(
+					TRACE_LEVEL_WARNING,
+					TRACE_SAMPLES,
+					"Error HID read request buffer is too small (%lu bytes) - STATUS:%X",
+					hidReportRequestBufferLength,
+					status);
+			}
+			else
+			{
+				RtlCopyMemory(
+					hidReportRequestBuffer,
+					&hidReportsFromDriver[i],
+					sizeof(HID_INPUT_REPORT));
 
-                WdfRequestSetInformation(request, sizeof(HID_INPUT_REPORT));
-            }
-        }
+				WdfRequestSetInformation(request, sizeof(HID_INPUT_REPORT));
+			}
+		}
 
-        WdfRequestComplete(request, status);
-    }
+		WdfRequestComplete(request, status);
+	}
 }
 
 NTSTATUS
@@ -220,8 +203,8 @@ Return Value:
 	{
 		Trace(
 			TRACE_LEVEL_ERROR,
-			TRACE_FLAG_POWER,
-			"Error setting device to D0 - STATUS:%X",
+			TRACE_POWER,
+			"Error setting device to D0 - 0x%08lX",
 			status);
 	}
 
@@ -278,80 +261,11 @@ Return Value:
 	{
 		Trace(
 			TRACE_LEVEL_ERROR,
-			TRACE_FLAG_POWER,
-			"Error exiting D0 - STATUS:%X",
+			TRACE_POWER,
+			"Error exiting D0 - 0x%08lX",
 			status);
 	}
 
-	return status;
-}
-
-
-NTSTATUS GetGPIO(WDFIOTARGET gpio, unsigned char* value)
-{
-	NTSTATUS status = STATUS_SUCCESS;
-	WDF_MEMORY_DESCRIPTOR outputDescriptor;
-
-	WDF_MEMORY_DESCRIPTOR_INIT_BUFFER(&outputDescriptor, value, 1);
-
-	status = WdfIoTargetSendIoctlSynchronously(gpio, NULL, IOCTL_GPIO_READ_PINS, NULL, &outputDescriptor, NULL, NULL);
-
-	return status;
-}
-
-NTSTATUS SetGPIO(WDFIOTARGET gpio, unsigned char* value)
-{
-	NTSTATUS status = STATUS_SUCCESS;
-	WDF_MEMORY_DESCRIPTOR inputDescriptor, outputDescriptor;
-
-	WDF_MEMORY_DESCRIPTOR_INIT_BUFFER(&inputDescriptor, value, 1);
-	WDF_MEMORY_DESCRIPTOR_INIT_BUFFER(&outputDescriptor, value, 1);
-
-	status = WdfIoTargetSendIoctlSynchronously(gpio, NULL, IOCTL_GPIO_WRITE_PINS, &inputDescriptor, &outputDescriptor, NULL, NULL);
-
-	return status;
-}
-
-NTSTATUS OpenIOTarget(PDEVICE_EXTENSION ctx, LARGE_INTEGER res, ACCESS_MASK use, WDFIOTARGET* target)
-{
-	NTSTATUS status = STATUS_SUCCESS;
-	WDF_OBJECT_ATTRIBUTES ObjectAttributes;
-	WDF_IO_TARGET_OPEN_PARAMS OpenParams;
-	UNICODE_STRING ReadString;
-	WCHAR ReadStringBuffer[260];
-
-	Trace(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "OpenIOTarget Entry");
-
-	RtlInitEmptyUnicodeString(&ReadString,
-		ReadStringBuffer,
-		sizeof(ReadStringBuffer));
-
-	status = RESOURCE_HUB_CREATE_PATH_FROM_ID(&ReadString,
-		res.LowPart,
-		res.HighPart);
-	if (!NT_SUCCESS(status)) {
-		Trace(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "RESOURCE_HUB_CREATE_PATH_FROM_ID failed 0x%x", status);
-		goto Exit;
-	}
-
-	WDF_OBJECT_ATTRIBUTES_INIT(&ObjectAttributes);
-	ObjectAttributes.ParentObject = ctx->FxDevice;
-
-	status = WdfIoTargetCreate(ctx->FxDevice, &ObjectAttributes, target);
-	if (!NT_SUCCESS(status)) {
-		Trace(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "WdfIoTargetCreate failed 0x%x", status);
-		goto Exit;
-	}
-
-	WDF_IO_TARGET_OPEN_PARAMS_INIT_OPEN_BY_NAME(&OpenParams, &ReadString, use);
-	status = WdfIoTargetOpen(*target, &OpenParams);
-	if (!NT_SUCCESS(status)) {
-		Trace(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "WdfIoTargetOpen failed 0x%x", status);
-		goto Exit;
-	}
-
-Exit:
-	Trace(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "OpenIOTarget Exit");
 	return status;
 }
 
@@ -388,8 +302,6 @@ OnPrepareHardware(
 	PDEVICE_EXTENSION devContext;
 	ULONG resourceCount;
 	ULONG i;
-	//LARGE_INTEGER delay;
-	//unsigned char value;
 
 	UNREFERENCED_PARAMETER(FxResourcesRaw);
 
@@ -416,63 +328,18 @@ OnPrepareHardware(
 
 			status = STATUS_SUCCESS;
 		}
-
-		if (res->Type == CmResourceTypeConnection &&
-			res->u.Connection.Class == CM_RESOURCE_CONNECTION_CLASS_GPIO &&
-			res->u.Connection.Type == CM_RESOURCE_CONNECTION_TYPE_GPIO_IO)
-		{
-			devContext->ResetGpioId.LowPart = 
-				res->u.Connection.IdLowPart;
-			devContext->ResetGpioId.HighPart = 
-				res->u.Connection.IdHighPart;
-
-			devContext->HasResetGpio = TRUE;
-		}
 	}
 
 	if (!NT_SUCCESS(status))
 	{
 		Trace(
 			TRACE_LEVEL_ERROR,
-			TRACE_FLAG_INIT,
-			"Error finding CmResourceTypeConnection resource - STATUS:%X",
+			TRACE_INIT,
+			"Error finding CmResourceTypeConnection resource - 0x%08lX",
 			status);
 
 		goto exit;
 	}
-
-	/*if (devContext->HasResetGpio)
-	{
-		status = OpenIOTarget(devContext, devContext->ResetGpioId, GENERIC_READ | GENERIC_WRITE, &devContext->ResetGpio);
-		if (!NT_SUCCESS(status)) {
-			Trace(TRACE_LEVEL_ERROR, TRACE_DRIVER, "OpenIOTarget failed for Reset GPIO 0x%x", status);
-			goto exit;
-		}
-
-		Trace(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "Starting bring up sequence for the controller");
-
-		Trace(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "Setting reset gpio pin to low");
-
-		value = 0;
-		SetGPIO(devContext->ResetGpio, &value);
-
-		Trace(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "Waiting...");
-
-		delay.QuadPart = -10 * TOUCH_POWER_RAIL_STABLE_TIME;
-		KeDelayExecutionThread(KernelMode, TRUE, &delay);
-
-		Trace(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "Setting reset gpio pin to high");
-
-		value = 1;
-		SetGPIO(devContext->ResetGpio, &value);
-
-		Trace(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "Waiting...");
-
-		delay.QuadPart = -10 * TOUCH_DELAY_TO_COMMUNICATE;
-		KeDelayExecutionThread(KernelMode, TRUE, &delay);
-
-		Trace(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "Done");
-	}*/
 
 	//
 	// Initialize Spb so the driver can issue reads/writes
@@ -483,8 +350,8 @@ OnPrepareHardware(
 	{
 		Trace(
 			TRACE_LEVEL_ERROR,
-			TRACE_FLAG_INIT,
-			"Error in Spb initialization - STATUS:%X",
+			TRACE_INIT,
+			"Error in Spb initialization - 0x%08lX",
 			status);
 
 		goto exit;
@@ -499,8 +366,8 @@ OnPrepareHardware(
 	{
 		Trace(
 			TRACE_LEVEL_ERROR,
-			TRACE_FLAG_INIT,
-			"Error allocating touch context - STATUS:%X",
+			TRACE_INIT,
+			"Error allocating touch context - 0x%08lX",
 			status);
 
 		goto exit;
@@ -515,8 +382,8 @@ OnPrepareHardware(
 	{
 		Trace(
 			TRACE_LEVEL_ERROR,
-			TRACE_FLAG_INIT,
-			"Error starting touch device - STATUS:%X",
+			TRACE_INIT,
+			"Error starting touch device - 0x%08lX",
 			status);
 
 		goto exit;
@@ -565,8 +432,8 @@ OnReleaseHardware(
 	{
 		Trace(
 			TRACE_LEVEL_ERROR,
-			TRACE_FLAG_PNP,
-			"Error stopping device - STATUS:%X",
+			TRACE_PNP,
+			"Error stopping device - 0x%08lX",
 			status);
 	}
 
@@ -576,8 +443,8 @@ OnReleaseHardware(
 	{
 		Trace(
 			TRACE_LEVEL_ERROR,
-			TRACE_FLAG_PNP,
-			"Error freeing touch context - STATUS:%X",
+			TRACE_PNP,
+			"Error freeing touch context - 0x%08lX",
 			status);
 	}
 

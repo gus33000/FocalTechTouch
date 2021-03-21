@@ -27,8 +27,9 @@
 #include <reshub.h>
 #include <kbdmou.h>
 #include <gpio.h>
-#include "spb.h"
-#include "hid.h"
+#include <spb.h>
+#include <hid.h>
+#include <trace.h>
 
 #define TOUCH_POOL_TAG                  (ULONG)'cuoT'
 

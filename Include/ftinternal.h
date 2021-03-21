@@ -23,8 +23,8 @@
 
 #include <wdm.h>
 #include <wdf.h>
-#include "controller.h"
-#include "resolutions.h"
+#include <controller.h>
+#include <resolutions.h>
 
 typedef struct _FOCAL_TECH_TOUCH_DATA
 {

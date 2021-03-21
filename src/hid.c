@@ -18,14 +18,14 @@
 
 --*/
 
-#include "internal.h"
-#include "controller.h"
-#include "config.h"
-#include "hid.h"
-#include "debug.h"
-#include "hidCommon.h"
-#include "ftinternal.h"
-//#include "hid.tmh"
+#include <internal.h>
+#include <controller.h>
+#include <config.h>
+#include <hid.h>
+//#include <debug.h>
+#include <hidCommon.h>
+#include <ftinternal.h>
+#include <hid.tmh>
 
 //
 // HID Report Descriptor for a touch device
@@ -115,7 +115,7 @@ TchGenerateHidReportDescriptor
 	{
 		Trace(
 			TRACE_LEVEL_INFORMATION,
-			TRACE_FLAG_HID,
+			TRACE_HID,
 			"Failed to create hidReportDescBuffer on %p",
 			hidReportDescBuffer);
 
@@ -124,7 +124,7 @@ TchGenerateHidReportDescriptor
 
 	Trace(
 		TRACE_LEVEL_INFORMATION,
-		TRACE_FLAG_HID,
+		TRACE_HID,
 		"Created hidReportDescBuffer on %p",
 		hidReportDescBuffer);
 
@@ -146,7 +146,7 @@ TchGenerateHidReportDescriptor
 
 				Trace(
 					TRACE_LEVEL_INFORMATION,
-					TRACE_FLAG_HID,
+					TRACE_HID,
 					"Set X=%u in %p",
 					touchContext->Props.DisplayPhysicalWidth,
 					hidReportDescBuffer + i);
@@ -159,7 +159,7 @@ TchGenerateHidReportDescriptor
 
 				Trace(
 					TRACE_LEVEL_INFORMATION,
-					TRACE_FLAG_HID,
+					TRACE_HID,
 					"Set Y=%u in %p",
 					touchContext->Props.DisplayPhysicalHeight,
 					hidReportDescBuffer + i);
@@ -169,7 +169,7 @@ TchGenerateHidReportDescriptor
 
 	Trace(
 		TRACE_LEVEL_INFORMATION,
-		TRACE_FLAG_HID,
+		TRACE_HID,
 		"Set X=%u and Y=%u in hidReportDescriptor",
 		touchContext->Props.DisplayPhysicalWidth,
 		touchContext->Props.DisplayPhysicalHeight);
@@ -187,7 +187,7 @@ TchGenerateHidReportDescriptor
 	{
 		Trace(
 			TRACE_LEVEL_ERROR,
-			TRACE_FLAG_HID,
+			TRACE_HID,
 			"Error copying HID report descriptor to request memory - STATUS:%X",
 			status);
 		goto exit;
@@ -238,7 +238,7 @@ Return Value:
 	{
 		Trace(
 			TRACE_LEVEL_ERROR,
-			TRACE_FLAG_HID,
+			TRACE_HID,
 			"Failed to forward HID request to I/O queue - STATUS:%X",
 			status);
 
@@ -348,7 +348,7 @@ Return Value:
 	{
 		Trace(
 			TRACE_LEVEL_ERROR,
-			TRACE_FLAG_HID,
+			TRACE_HID,
 			"Error getting device string - STATUS:%X",
 			status);
 	}
@@ -400,7 +400,7 @@ Return Value:
 	{
 		Trace(
 			TRACE_LEVEL_ERROR,
-			TRACE_FLAG_HID,
+			TRACE_HID,
 			"Error getting HID descriptor request memory - STATUS:%X",
 			status);
 		goto exit;
@@ -419,7 +419,7 @@ Return Value:
 	{
 		Trace(
 			TRACE_LEVEL_ERROR,
-			TRACE_FLAG_HID,
+			TRACE_HID,
 			"Error copying HID descriptor to request memory - STATUS:%X",
 			status);
 		goto exit;
@@ -482,7 +482,7 @@ Return Value:
 	{
 		Trace(
 			TRACE_LEVEL_ERROR,
-			TRACE_FLAG_HID,
+			TRACE_HID,
 			"Error getting HID report descriptor request memory - STATUS:%X",
 			status);
 		goto exit;
@@ -548,7 +548,7 @@ Return Value:
 	{
 		Trace(
 			TRACE_LEVEL_ERROR,
-			TRACE_FLAG_HID,
+			TRACE_HID,
 			"Error retrieving device attribute output buffer - STATUS:%X",
 			status);
 		goto exit;

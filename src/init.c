@@ -18,10 +18,10 @@
 
 --*/
 
-#include "ftinternal.h"
-#include "spb.h"
-#include "debug.h"
-//#include "init.tmh"
+#include <ftinternal.h>
+#include <spb.h>
+//#include <debug.h>
+#include <init.tmh>
 
 #pragma warning(push)
 #pragma warning(disable:4242) // Conversion, possible loss of data
@@ -118,7 +118,7 @@ Return Value:
 	{
 		Trace(
 			TRACE_LEVEL_ERROR,
-			TRACE_FLAG_INIT,
+			TRACE_INIT,
 			"Could not allocate controller context!");
 
 		status = STATUS_UNSUCCESSFUL;
@@ -145,10 +145,11 @@ Return Value:
 	{
 		Trace(
 			TRACE_LEVEL_ERROR,
-			TRACE_FLAG_INIT,
-			"Could not allocate controller context - STATUS:%X",
+			TRACE_INIT,
+			"Could not create lock - 0x%08lX",
 			status);
 
+		TchFreeContext(context);
 		goto exit;
 
 	}

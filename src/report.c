@@ -18,13 +18,13 @@
 
 --*/
 
-#include "controller.h"
-#include "config.h"
-#include "ftinternal.h"
-#include "spb.h"
-#include "debug.h"
-#include "hid.h"
-//#include "report.tmh"
+#include <controller.h>
+#include <config.h>
+#include <ftinternal.h>
+#include <spb.h>
+//#include <debug.h>
+#include <hid.h>
+#include <report.tmh>
 
 NTSTATUS
 FtServiceTouchDataInterrupt(
@@ -60,7 +60,7 @@ Return Value:
 	event_data = ExAllocatePoolWithTag(
 		NonPagedPool,
 		sizeof(FOCAL_TECH_EVENT_DATA),
-		TOUCH_POOL_TAG);
+		TOUCH_POOL_TAG_F12);
 
 	if (event_data == NULL)
 	{
@@ -74,7 +74,7 @@ Return Value:
 	{
 		Trace(
 			TRACE_LEVEL_ERROR,
-			TRACE_FLAG_SAMPLES,
+			TRACE_SAMPLES,
 			"Error. Can't GetTouches from controller - STATUS %x",
 			status
 		);
@@ -98,7 +98,7 @@ Return Value:
 	{
 		Trace(
 			TRACE_LEVEL_WARNING,
-			TRACE_FLAG_SAMPLES,
+			TRACE_SAMPLES,
 			"Unable to report touches, only multitouch mode is supported");
 
 		status = STATUS_NOT_IMPLEMENTED;
@@ -115,7 +115,7 @@ Return Value:
 		{
 			Trace(
 				TRACE_LEVEL_ERROR,
-				TRACE_FLAG_HID,
+				TRACE_HID,
 				"can't get report queue slot [fillHidReport(touches)], status: %x",
 				status
 			);
@@ -163,7 +163,7 @@ Return Value:
 #ifdef COORDS_DEBUG
 			Trace(
 				TRACE_LEVEL_NOISE,
-				TRACE_FLAG_REPORTING,
+				TRACE_REPORTING,
 				"ActualCount %d, ContactId %u X %u Y %u Tip %u",
 				hidTouch->InputReport.ActualCount,
 				hidTouch->InputReport.Contacts[i].ContactId,
@@ -178,7 +178,7 @@ Return Value:
 free_buffer:
 	ExFreePoolWithTag(
 		event_data,
-		TOUCH_POOL_TAG
+		TOUCH_POOL_TAG_F12
 	);
 
 	//
@@ -259,7 +259,7 @@ Return Value:
 		{
 			Trace(
 				TRACE_LEVEL_ERROR,
-				TRACE_FLAG_INTERRUPT,
+				TRACE_INTERRUPT,
 				"Error processing touch event - STATUS:%X",
 				status);
 		}

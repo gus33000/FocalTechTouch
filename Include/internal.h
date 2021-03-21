@@ -21,10 +21,7 @@
 
 #pragma once
 
-#include "controller.h"
-
-#define TOUCH_DELAY_TO_COMMUNICATE 200000
-#define TOUCH_POWER_RAIL_STABLE_TIME 2000
+#include <controller.h>
 
 //
 // Device context

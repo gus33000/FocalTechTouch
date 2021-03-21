@@ -17,8 +17,8 @@
 	Revision History:
 
 --*/
-#include "config.h"
-#include "hidCommon.h"
+#include <config.h>
+#include <hidCommon.h>
 
 #pragma once
 

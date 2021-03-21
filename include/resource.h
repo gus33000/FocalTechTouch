@@ -1,6 +1,6 @@
 //{{NO_DEPENDENCIES}}
 // Microsoft Visual C++ generated include file.
-// Used by SynapticsTouch.rc
+// Used by Resource.rc
 
 #define IDS_APP_TITLE           103
 
