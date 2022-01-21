@@ -1,6 +1,7 @@
 /*++
     Copyright (c) Microsoft Corporation. All Rights Reserved.
-    Sample code. Dealpoint ID #843729.
+    Copyright (c) Bingxing Wang. All Rights Reserved.
+    Copyright (c) LumiaWoA authors. All Rights Reserved.
 
     Module Name:
 
@@ -22,7 +23,6 @@
 #include <internal.h>
 #include <controller.h>
 #include <idle.h>
-//#include <debug.h>
 #include <idle.tmh>
 
 NTSTATUS
@@ -92,7 +92,7 @@ Return Value:
         Trace(
             TRACE_LEVEL_ERROR,
             TRACE_HID,
-            "Error: Input buffer is too small to process idle request - 0x%08lX",
+            "Error: Input buffer is too small to process idle request - 0x%08lX", 
             status);
 
         goto exit;

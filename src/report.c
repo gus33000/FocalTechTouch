@@ -1,6 +1,7 @@
 /*++
 	Copyright (c) Microsoft Corporation. All Rights Reserved.
-	Sample code. Dealpoint ID #843729.
+	Copyright (c) Bingxing Wang. All Rights Reserved.
+	Copyright (c) LumiaWoA authors. All Rights Reserved.
 
 	Module Name:
 
@@ -8,7 +9,7 @@
 
 	Abstract:
 
-		Contains Synaptics specific code for reporting samples
+		Contains FocalTech specific code for reporting samples
 
 	Environment:
 
@@ -18,134 +19,430 @@
 
 --*/
 
+#include <Cross Platform Shim\compat.h>
 #include <controller.h>
-#include <config.h>
-#include <ftinternal.h>
-#include <spb.h>
-//#include <debug.h>
+#include <resolutions.h>
 #include <hid.h>
+#include <HidCommon.h>
+#include <spb.h>
+#include <report.h>
 #include <report.tmh>
 
 NTSTATUS
-FtServiceTouchDataInterrupt(
-	IN FT5X_CONTROLLER_CONTEXT* ControllerContext,
-	IN SPB_CONTEXT* SpbContext,
-	IN UCHAR InputMode
+ReportWakeup(
+	IN PREPORT_CONTEXT ReportContext
+)
+{
+	NTSTATUS status = STATUS_SUCCESS;
+	HID_INPUT_REPORT HidReport;
+
+	RtlZeroMemory(&HidReport, sizeof(HID_INPUT_REPORT));
+
+	HidReport.ReportID = REPORTID_KEYPAD;
+	HidReport.KeyReport.ACBack = ReportContext->ButtonCache.ButtonSlots[0];
+	HidReport.KeyReport.Start = ReportContext->ButtonCache.ButtonSlots[1];
+	HidReport.KeyReport.ACSearch = ReportContext->ButtonCache.ButtonSlots[2];
+	HidReport.KeyReport.SystemPowerDown = 1;
+
+	status = TchSendReport(ReportContext->PingPongQueue, &HidReport);
+
+	if (!NT_SUCCESS(status))
+	{
+		Trace(
+			TRACE_LEVEL_ERROR,
+			TRACE_REPORTING,
+			"Error sending hid report for wake up (1) - 0x%08lX",
+			status);
+
+		goto exit;
+	}
+
+	RtlZeroMemory(&HidReport, sizeof(HID_INPUT_REPORT));
+
+	HidReport.ReportID = REPORTID_KEYPAD;
+	HidReport.KeyReport.ACBack = ReportContext->ButtonCache.ButtonSlots[0];
+	HidReport.KeyReport.Start = ReportContext->ButtonCache.ButtonSlots[1];
+	HidReport.KeyReport.ACSearch = ReportContext->ButtonCache.ButtonSlots[2];
+	HidReport.KeyReport.SystemPowerDown = 0;
+
+	status = TchSendReport(ReportContext->PingPongQueue, &HidReport);
+
+	if (!NT_SUCCESS(status))
+	{
+		Trace(
+			TRACE_LEVEL_ERROR,
+			TRACE_REPORTING,
+			"Error sending hid report for wake up (2) - 0x%08lX",
+			status);
+
+		goto exit;
+	}
+
+exit:
+	return status;
+}
+
+NTSTATUS
+ReportKeypad(
+	IN PREPORT_CONTEXT ReportContext,
+	IN BOOLEAN Back,
+	IN BOOLEAN Start,
+	IN BOOLEAN Search
+)
+{
+	NTSTATUS status = STATUS_SUCCESS;
+	HID_INPUT_REPORT HidReport;
+
+	RtlZeroMemory(&HidReport, sizeof(HID_INPUT_REPORT));
+
+	HidReport.ReportID = REPORTID_KEYPAD;
+	HidReport.KeyReport.ACBack = Back;
+	HidReport.KeyReport.Start = Start;
+	HidReport.KeyReport.ACSearch = Search;
+
+	ReportContext->ButtonCache.ButtonSlots[0] = Back;
+	ReportContext->ButtonCache.ButtonSlots[1] = Start;
+	ReportContext->ButtonCache.ButtonSlots[2] = Search;
+	HidReport.KeyReport.SystemPowerDown = 0;
+
+	status = TchSendReport(ReportContext->PingPongQueue, &HidReport);
+
+	if (!NT_SUCCESS(status))
+	{
+		Trace(
+			TRACE_LEVEL_ERROR,
+			TRACE_REPORTING,
+			"Error sending hid report for keypad - 0x%08lX",
+			status);
+
+		goto exit;
+	}
+
+exit:
+	return status;
+}
+
+NTSTATUS
+ReportPen(
+	IN PREPORT_CONTEXT ReportContext,
+	IN BOOLEAN TipSwitch,
+	IN BOOLEAN BarrelSwitch,
+	IN BOOLEAN Invert,
+	IN BOOLEAN Eraser,
+	IN BOOLEAN InRange,
+	IN USHORT  X,
+	IN USHORT  Y,
+	IN USHORT  TipPressure,
+	IN USHORT  XTilt,
+	IN USHORT  YTilt
+)
+{
+	NTSTATUS status;
+	HID_INPUT_REPORT HidReport;
+	RtlZeroMemory(&HidReport, sizeof(HID_INPUT_REPORT));
+
+	USHORT ScratchX = (USHORT)X;
+	USHORT ScratchY = (USHORT)Y;
+
+	//
+	// Perform per-platform x/y adjustments to controller coordinates
+	//
+	TchTranslateToDisplayCoordinates(
+		&ScratchX,
+		&ScratchY,
+		&ReportContext->Props);
+
+	HidReport.ReportID = REPORTID_STYLUS;
+
+	HidReport.PenReport.InRange = InRange;
+	HidReport.PenReport.TipSwitch = TipSwitch;
+	HidReport.PenReport.Eraser = Eraser;
+	HidReport.PenReport.Invert = Invert;
+	HidReport.PenReport.BarrelSwitch = BarrelSwitch;
+
+	HidReport.PenReport.X = ScratchX;
+	HidReport.PenReport.Y = ScratchY;
+	HidReport.PenReport.TipPressure = TipPressure;
+
+	HidReport.PenReport.XTilt = XTilt;
+	HidReport.PenReport.YTilt = YTilt;
+
+	status = TchSendReport(ReportContext->PingPongQueue, &HidReport);
+
+	if (!NT_SUCCESS(status))
+	{
+		Trace(
+			TRACE_LEVEL_ERROR,
+			TRACE_REPORTING,
+			"Error sending hid report for active pen - 0x%08lX",
+			status);
+
+		goto exit;
+	}
+
+exit:
+	return status;
+}
+
+VOID
+ReportUpdateLocalObjectCache(
+	IN DETECTED_OBJECTS* Data,
+	IN OBJECT_CACHE* Cache
 )
 /*++
+
 Routine Description:
-	Called when a touch interrupt needs service. Because we fill HID reports
-	with two touches at a time, if more than two touches were read from
-	hardware, we may need to complete this request from local cached state.
+
+	This routine takes raw data reported by the FocalTech hardware and
+	parses it to update a local cache of finger states. This routine manages
+	removing lifted touches from the cache, and manages a map between the
+	order of reported touches in hardware, and the order the driver should
+	use in reporting.
+
 Arguments:
+
+	Data - A pointer to the new data returned from hardware
+	Cache - A data structure holding various current finger state info
+
+Return Value:
+
+	None.
+
+--*/
+{
+	int i, j;
+
+	//
+	// When hardware was last read, if any slots reported as lifted, we
+	// must clean out the slot and old touch info. There may be new
+	// finger data using the slot.
+	//
+	for (i = 0; i < MAX_TOUCHES; i++)
+	{
+		//
+		// Sweep for a slot that needs to be cleaned
+		//
+		if (!(Cache->SlotDirty & (1 << i)))
+		{
+			continue;
+		}
+
+		NT_ASSERT(Cache->DownCount > 0);
+
+		//
+		// Find the slot in the reporting list 
+		//
+		for (j = 0; j < MAX_TOUCHES; j++)
+		{
+			if (Cache->DownOrder[j] == i)
+			{
+				break;
+			}
+		}
+
+		NT_ASSERT(j != MAX_TOUCHES);
+
+		//
+		// Remove the slot. If the finger lifted was the last in the list,
+		// we just decrement the list total by one. If it was not last, we
+		// shift the trailing list items up by one.
+		//
+		for (; (j < Cache->DownCount - 1) && (j < MAX_TOUCHES - 1); j++)
+		{
+			Cache->DownOrder[j] = Cache->DownOrder[j + 1];
+		}
+		Cache->DownCount--;
+
+		//
+		// Finished, clobber the dirty bit
+		//
+		Cache->SlotDirty &= ~(1 << i);
+	}
+
+	//
+	// Cache the new set of finger data reported by hardware
+	//
+	for (i = 0; i < MAX_TOUCHES; i++)
+	{
+		//
+		// Take actions when a new contact is first reported as down
+		//
+		if ((Data->States[i] != OBJECT_STATE_NOT_PRESENT) &&
+			((Cache->SlotValid & (1 << i)) == 0) &&
+			(Cache->DownCount < MAX_TOUCHES))
+		{
+			Cache->SlotValid |= (1 << i);
+			Cache->DownOrder[Cache->DownCount++] = i;
+		}
+
+		//
+		// Ignore slots with no new information
+		//
+		if (!(Cache->SlotValid & (1 << i)))
+		{
+			continue;
+		}
+
+		//
+		// When finger is down, update local cache with new information from
+		// the controller. When finger is up, we'll use last cached value
+		//
+		Cache->Slot[i].status = (UCHAR)Data->States[i];
+		if (Cache->Slot[i].status)
+		{
+			Cache->Slot[i].x = Data->Positions[i].X;
+			Cache->Slot[i].y = Data->Positions[i].Y;
+		}
+
+		//
+		// If a finger lifted, note the slot is now inactive so that any
+		// cached data is cleaned out before we read hardware again.
+		//
+		if (Cache->Slot[i].status == OBJECT_STATE_NOT_PRESENT)
+		{
+			Cache->SlotDirty |= (1 << i);
+			Cache->SlotValid &= ~(1 << i);
+		}
+	}
+
+	//
+	// Get current scan time (in 100us units)
+	//
+	ULONG64 QpcTimeStamp;
+	Cache->ScanTime = KeQueryInterruptTimePrecise(&QpcTimeStamp) / 1000;
+}
+
+NTSTATUS
+ReportObjects(
+	IN PREPORT_CONTEXT ReportContext,
+	IN DETECTED_OBJECTS data
+)
+/*++
+
+Routine Description:
+
+	Called when a touch interrupt needs service.
+
+Arguments:
+
 	ControllerContext - Touch controller context
 	SpbContext - A pointer to the current SPB context (I2C, etc)
 	HidReport- Buffer to fill with a hid report if touch data is available
 	InputMode - Specifies mouse, single-touch, or multi-touch reporting modes
 	PendingTouches - Notifies caller if there are more touches to report, to
 		complete reporting the full state of fingers on the screen
+
 Return Value:
+
 	NTSTATUS indicating whether or not the current hid report buffer was filled
+
 	PendingTouches also indicates whether the caller should expect more than
 		one request to be completed to indicate the full state of fingers on
 		the screen
 --*/
 {
-	NTSTATUS status;
+	NTSTATUS status = STATUS_SUCCESS;
+	HID_INPUT_REPORT HidReport;
+	int TouchesReported = 0;
+	int currentFingerIndex;
+	int fingersToReport = 0;
+	USHORT SctatchX = 0, ScratchY = 0;
+	BOOLEAN HasPen = FALSE;
 
-	status = STATUS_SUCCESS;
-
-	PFOCAL_TECH_EVENT_DATA event_data;
-
-	event_data = ExAllocatePoolWithTag(
-		NonPagedPool,
-		sizeof(FOCAL_TECH_EVENT_DATA),
-		TOUCH_POOL_TAG_F12);
-
-	if (event_data == NULL)
-	{
-		status = STATUS_INSUFFICIENT_RESOURCES;
-		goto exit;
-	}
-
-	status = SpbReadDataSynchronously(SpbContext, 0, event_data, sizeof(FOCAL_TECH_EVENT_DATA));
-
-	if (!NT_SUCCESS(status))
-	{
-		Trace(
-			TRACE_LEVEL_ERROR,
-			TRACE_SAMPLES,
-			"Error. Can't GetTouches from controller - STATUS %x",
-			status
-		);
-
-		goto free_buffer;
-	}
+	//
+	// Process the new touch data by updating our cached state
+	//
+	ReportUpdateLocalObjectCache(
+		&data,
+		&ReportContext->Cache);
 
 	//
 	// If no touches are present return that no data needed to be reported
 	//
-	if (event_data->NumberOfTouchPoints == 0)
+	if (ReportContext->Cache.DownCount == 0)
 	{
 		status = STATUS_NO_DATA_DETECTED;
-		goto free_buffer;
+		goto exit;
 	}
 
-	//
-	// Single-finger and HID-mouse input modes not implemented
-	//
-	if (MODE_MULTI_TOUCH != InputMode)
+	while (TouchesReported != ReportContext->Cache.DownCount)
 	{
-		Trace(
-			TRACE_LEVEL_WARNING,
-			TRACE_SAMPLES,
-			"Unable to report touches, only multitouch mode is supported");
+		//
+		// Fill report with the next cached touches
+		//
+		RtlZeroMemory(&HidReport, sizeof(HID_INPUT_REPORT));
 
-		status = STATUS_NOT_IMPLEMENTED;
-		goto free_buffer;
-	}
+		currentFingerIndex = 0;
 
-	//
-	// Fill report with the next touches
-	//
-	{
-		PHID_INPUT_REPORT hidReport;
-		status = GetNextHidReport(ControllerContext, &hidReport);
-		if (!NT_SUCCESS(status))
-		{
-			Trace(
-				TRACE_LEVEL_ERROR,
-				TRACE_HID,
-				"can't get report queue slot [fillHidReport(touches)], status: %x",
-				status
-			);
-			goto free_buffer;
-		}
-		hidReport->ReportID = REPORTID_MTOUCH;
+		fingersToReport = min(ReportContext->Cache.DownCount - TouchesReported, 2);
 
-		PHID_TOUCH_REPORT hidTouch = &(hidReport->TouchReport);
+		HidReport.ReportID = REPORTID_FINGER;
+
 		//
 		// There are only 16-bits for ScanTime, truncate it
 		//
-		hidTouch->InputReport.ScanTime = 0 & 0xFFFF;
+		//HidReport->ScanTime = Cache->ScanTime & 0xFFFF;
 
 		//
 		// Report the count
-		// We're sending touches using hybrid mode with 2 fingers in our
+		// We're sending touches using hybrid mode with 5 fingers in our
 		// report descriptor. The first report must indicate the
 		// total count of touch fingers detected by the digitizer.
 		// The remaining reports must indicate 0 for the count.
 		// The first report will have the TouchesReported integer set to 0
 		// The others will have it set to something else.
 		//
-		hidTouch->InputReport.ActualCount = event_data->NumberOfTouchPoints;
-
-		for (int i = 0; i < event_data->NumberOfTouchPoints; i++)
+		if (TouchesReported == 0)
 		{
-			hidTouch->InputReport.Contacts[i].ContactId = (UCHAR)i;
+			HidReport.TouchReport.ContactCount = (UCHAR)ReportContext->Cache.DownCount;
+		}
+		else
+		{
+			HidReport.TouchReport.ContactCount = 0;
+		}
 
-			USHORT SctatchX = event_data->TouchData[i].PositionX_Low | (event_data->TouchData[i].PositionX_High << 8);
-			USHORT ScratchY = event_data->TouchData[i].PositionY_Low | (event_data->TouchData[i].PositionY_High << 8);
+		HasPen = FALSE;
+
+		for (currentFingerIndex = 0; currentFingerIndex < fingersToReport; currentFingerIndex++)
+		{
+			int currentlyReporting = ReportContext->Cache.DownOrder[TouchesReported];
+
+			OBJECT_INFO info = ReportContext->Cache.Slot[currentlyReporting];
+
+			if (info.status == OBJECT_STATE_PEN_PRESENT_WITH_ERASER ||
+				info.status == OBJECT_STATE_PEN_PRESENT_WITH_TIP)
+			{
+				HasPen = TRUE;
+				ReportContext->PenPresent = TRUE;
+
+				status = ReportPen(
+					ReportContext,
+					TRUE,
+					FALSE,
+					info.status == OBJECT_STATE_PEN_PRESENT_WITH_ERASER,
+					info.status == OBJECT_STATE_PEN_PRESENT_WITH_ERASER,
+					TRUE,
+					(USHORT)info.x,
+					(USHORT)info.y,
+					1,
+					0,
+					0);
+				if (!NT_SUCCESS(status))
+				{
+					Trace(
+						TRACE_LEVEL_ERROR,
+						TRACE_REPORTING,
+						"Error sending hid report for passive pen - 0x%08lX",
+						status);
+
+					goto exit;
+				}
+			}
+
+			HidReport.TouchReport.Contacts[currentFingerIndex].ContactID = (UCHAR)currentlyReporting;
+			SctatchX = (USHORT)info.x;
+			ScratchY = (USHORT)info.y;
+			HidReport.TouchReport.Contacts[currentFingerIndex].Confidence = 1;
 
 			//
 			// Perform per-platform x/y adjustments to controller coordinates
@@ -153,150 +450,61 @@ Return Value:
 			TchTranslateToDisplayCoordinates(
 				&SctatchX,
 				&ScratchY,
-				&ControllerContext->Props);
+				&ReportContext->Props);
 
-			hidTouch->InputReport.Contacts[i].wXData = SctatchX;
-			hidTouch->InputReport.Contacts[i].wYData = ScratchY;
+			if (info.status == OBJECT_STATE_FINGER_PRESENT_WITH_ACCURATE_POS)
+			{
+				HidReport.TouchReport.Contacts[currentFingerIndex].X = SctatchX;
+				HidReport.TouchReport.Contacts[currentFingerIndex].Y = ScratchY;
+				HidReport.TouchReport.Contacts[currentFingerIndex].TipSwitch = FINGER_STATUS;
+			}
 
-			hidTouch->InputReport.Contacts[i].bStatus = FINGER_STATUS;
-
-#ifdef COORDS_DEBUG
-			Trace(
-				TRACE_LEVEL_NOISE,
-				TRACE_REPORTING,
-				"ActualCount %d, ContactId %u X %u Y %u Tip %u",
-				hidTouch->InputReport.ActualCount,
-				hidTouch->InputReport.Contacts[i].ContactId,
-				hidTouch->InputReport.Contacts[i].wXData,
-				hidTouch->InputReport.Contacts[i].wYData,
-				hidTouch->InputReport.Contacts[i].bStatus
-			);
-#endif
+			TouchesReported++;
 		}
-	}
 
-free_buffer:
-	ExFreePoolWithTag(
-		event_data,
-		TOUCH_POOL_TAG_F12
-	);
+		if (HasPen == FALSE && ReportContext->PenPresent == TRUE)
+		{
+			ReportContext->PenPresent = FALSE;
 
-	//
-	// Update the caller if we still have outstanding touches to report
-	//
+			status = ReportPen(
+				ReportContext,
+				FALSE,
+				FALSE,
+				FALSE,
+				FALSE,
+				FALSE,
+				0,
+				0,
+				0,
+				0,
+				0);
 
-exit:
+			if (!NT_SUCCESS(status))
+			{
+				Trace(
+					TRACE_LEVEL_ERROR,
+					TRACE_REPORTING,
+					"Error sending hid report for passive pen - 0x%08lX",
+					status);
 
-	return status;
-}
+				goto exit;
+			}
+		}
 
-NTSTATUS
-TchServiceInterrupts(
-	IN VOID* ControllerContext,
-	IN SPB_CONTEXT* SpbContext,
-	IN UCHAR InputMode,
-    IN PHID_INPUT_REPORT* HidReports,
-    IN int* HidReportsLength
-)
-/*++
+		status = TchSendReport(ReportContext->PingPongQueue, &HidReport);
 
-Routine Description:
-
-	This routine is called in response to an interrupt. The driver will
-	service chip interrupts, and if data is available to report to HID,
-	fill the Request object buffer with a HID report.
-
-Arguments:
-
-	ControllerContext - Touch controller context
-	SpbContext - A pointer to the current i2c context
-	HidReport - Pointer to a HID_INPUT_REPORT structure to report to the OS
-	InputMode - Specifies mouse, single-touch, or multi-touch reporting modes
-	ServicingComplete - Notifies caller if there are more reports needed to
-		complete servicing interrupts coming from the hardware.
-
-Return Value:
-
-	NTSTATUS indicating whether or not the current HidReport has been filled
-
-	ServicingComplete indicates whether or not a new report buffer is required
-		to complete interrupt processing.
---*/
-{
-	NTSTATUS status = STATUS_NO_DATA_DETECTED;
-	FT5X_CONTROLLER_CONTEXT* controller;
-
-	UNREFERENCED_PARAMETER(InputMode);
-	UNREFERENCED_PARAMETER(SpbContext);
-
-	controller = (FT5X_CONTROLLER_CONTEXT*)ControllerContext;
-
-	//
-	// Grab a waitlock to ensure the ISR executes serially and is 
-	// protected against power state transitions
-	//
-	WdfWaitLockAcquire(controller->ControllerLock, NULL);
-
-	//
-	// RmiServiceXXX routine will change status to STATUS_SUCCESS if there
-	// is a HID report to process.
-	//
-	status = STATUS_UNSUCCESSFUL;
-
-	//
-	// Service a touch data event if indicated by hardware 
-	//
-	{
-		status = FtServiceTouchDataInterrupt(
-			ControllerContext,
-			SpbContext,
-			InputMode);
-
-		//
-		// report error
-		//
-		if (!NT_SUCCESS(status) && status != STATUS_NO_DATA_DETECTED)
+		if (!NT_SUCCESS(status))
 		{
 			Trace(
 				TRACE_LEVEL_ERROR,
-				TRACE_INTERRUPT,
-				"Error processing touch event - STATUS:%X",
+				TRACE_REPORTING,
+				"Error sending hid report for fingers - 0x%08lX",
 				status);
+
+			goto exit;
 		}
 	}
 
-	//
-	// Add servicing for additional touch interrupts here
-	//
-
-//exit:
-    
-    *HidReports = controller->HidQueue;
-    *HidReportsLength = controller->HidQueueCount;
-    controller->HidQueueCount = 0;
-
-	WdfWaitLockRelease(controller->ControllerLock);
-
+exit:
 	return status;
-}
-
-
-NTSTATUS
-GetNextHidReport(
-    IN FT5X_CONTROLLER_CONTEXT* ControllerContext,
-    IN PHID_INPUT_REPORT* HidReport
-)
-{
-    if(ControllerContext->HidQueueCount < MAX_REPORTS_IN_QUEUE)
-    {
-        *HidReport = &(ControllerContext->HidQueue[ControllerContext->HidQueueCount]);
-        ControllerContext->HidQueueCount++;
-        RtlZeroMemory(*HidReport, sizeof(HID_INPUT_REPORT));
-    }
-    else
-    {
-        return STATUS_NO_MEMORY;
-    }
-
-    return STATUS_SUCCESS;
 }

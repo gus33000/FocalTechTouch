@@ -1,6 +1,7 @@
 /*++
-	Copyright (c) Microsoft Corporation. All Rights Reserved.
-	Sample code. Dealpoint ID #843729.
+    Copyright (c) Microsoft Corporation. All Rights Reserved.
+    Copyright (c) Bingxing Wang. All Rights Reserved.
+    Copyright (c) LumiaWoA authors. All Rights Reserved.
 
 	Module Name:
 
@@ -8,7 +9,7 @@
 
 	Abstract:
 
-		Contains Synaptics initialization code
+		Contains FocalTech initialization code
 
 	Environment:
 
@@ -18,13 +19,10 @@
 
 --*/
 
-#include <ftinternal.h>
+#include <Cross Platform Shim\compat.h>
 #include <spb.h>
-//#include <debug.h>
+#include <ft5x\ftinternal.h>
 #include <init.tmh>
-
-#pragma warning(push)
-#pragma warning(disable:4242) // Conversion, possible loss of data
 
 NTSTATUS
 TchStartDevice(
@@ -51,10 +49,100 @@ TchStartDevice(
 
 --*/
 {
-	UNREFERENCED_PARAMETER(SpbContext);
-	UNREFERENCED_PARAMETER(ControllerContext);
+	FT5X_CONTROLLER_CONTEXT* controller;
+	ULONG interruptStatus;
+	NTSTATUS status;
 
-	return STATUS_SUCCESS;
+	controller = (FT5X_CONTROLLER_CONTEXT*)ControllerContext;
+	interruptStatus = 0;
+	status = STATUS_SUCCESS;
+
+	//
+	// Populate context with FT5X function descriptors
+	//
+	status = Ft5xBuildFunctionsTable(
+		ControllerContext,
+		SpbContext);
+
+	if (!NT_SUCCESS(status))
+	{
+		Trace(
+			TRACE_LEVEL_ERROR,
+			TRACE_INIT,
+			"Could not build table of FT5X functions - 0x%08lX",
+			status);
+		goto exit;
+	}
+
+	//
+	// Initialize FT5X function control registers
+	//
+	status = Ft5xConfigureFunctions(
+		ControllerContext,
+		SpbContext);
+
+	if (!NT_SUCCESS(status))
+	{
+		Trace(
+			TRACE_LEVEL_ERROR,
+			TRACE_INTERRUPT,
+			"Could not configure chip - 0x%08lX",
+			status);
+
+		goto exit;
+	}
+
+	status = Ft5xConfigureInterruptEnable(
+		ControllerContext,
+		SpbContext);
+
+	if (!NT_SUCCESS(status))
+	{
+		Trace(
+			TRACE_LEVEL_ERROR,
+			TRACE_INIT,
+			"Could not configure interrupt enablement - 0x%08lX",
+			status);
+		goto exit;
+	}
+
+	//
+	// Read and store the firmware version
+	//
+	status = Ft5xGetFirmwareVersion(
+		ControllerContext,
+		SpbContext);
+
+	if (!NT_SUCCESS(status))
+	{
+		Trace(
+			TRACE_LEVEL_ERROR,
+			TRACE_INIT,
+			"Could not get FT5X firmware version - 0x%08lX",
+			status);
+		goto exit;
+	}
+
+	//
+	// Clear any pending interrupts
+	//
+	status = Ft5xCheckInterrupts(
+		ControllerContext,
+		SpbContext,
+		&interruptStatus
+	);
+
+	if (!NT_SUCCESS(status))
+	{
+		Trace(
+			TRACE_LEVEL_ERROR,
+			TRACE_INIT,
+			"Could not get interrupt status - 0x%08lX%",
+			status);
+	}
+
+exit:
+	return status;
 }
 
 NTSTATUS
@@ -79,8 +167,11 @@ Return Value:
 	NTSTATUS indicating sucess or failure
 --*/
 {
+	FT5X_CONTROLLER_CONTEXT* controller;
+
 	UNREFERENCED_PARAMETER(SpbContext);
-	UNREFERENCED_PARAMETER(ControllerContext);
+
+	controller = (FT5X_CONTROLLER_CONTEXT*)ControllerContext;
 
 	return STATUS_SUCCESS;
 }
@@ -108,9 +199,9 @@ Return Value:
 {
 	FT5X_CONTROLLER_CONTEXT* context;
 	NTSTATUS status;
-
+	
 	context = ExAllocatePoolWithTag(
-		NonPagedPool,
+		NonPagedPoolNx,
 		sizeof(FT5X_CONTROLLER_CONTEXT),
 		TOUCH_POOL_TAG);
 
@@ -129,9 +220,9 @@ Return Value:
 	context->FxDevice = FxDevice;
 
 	//
-	// Get screen properties and populate context
+	// Get Touch settings and populate context
 	//
-	TchGetScreenProperties(&context->Props);
+	TchGetTouchSettings(&context->TouchSettings);
 
 	//
 	// Allocate a WDFWAITLOCK for guarding access to the
@@ -197,5 +288,3 @@ Return Value:
 
 	return STATUS_SUCCESS;
 }
-
-#pragma warning(pop)

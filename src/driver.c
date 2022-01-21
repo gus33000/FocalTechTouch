@@ -1,6 +1,7 @@
 /*++
     Copyright (c) Microsoft Corporation. All Rights Reserved.
-    Sample code. Dealpoint ID #843729.
+    Copyright (c) Bingxing Wang. All Rights Reserved.
+    Copyright (c) LumiaWoA authors. All Rights Reserved.
 
     Module Name:
 
@@ -24,6 +25,9 @@
 #include <device.h>
 #include <hid.h>
 #include <queue.h>
+#include <selftest\selftest.h>
+#include <selftest\enoselftest.h>
+#include <driver.h>
 #include <driver.tmh>
 
 #ifdef ALLOC_PRAGMA
@@ -188,7 +192,6 @@ Return Value:
         WdfIoQueueDispatchParallel);
 
     queueConfig.EvtIoInternalDeviceControl = OnInternalDeviceControl;
-    queueConfig.EvtIoDeviceControl = OnDeviceControl;
     queueConfig.PowerManaged = WdfFalse;
 
     status = WdfIoQueueCreate(
@@ -221,7 +224,7 @@ Return Value:
         fxDevice,
         &queueConfig,
         WDF_NO_OBJECT_ATTRIBUTES,
-        &devContext->PingPongQueue);
+        &devContext->ReportContext.PingPongQueue);
 
     if (!NT_SUCCESS(status))
     {
@@ -256,7 +259,7 @@ Return Value:
         Trace(
             TRACE_LEVEL_ERROR,
             TRACE_INIT,
-            "Error creating WDF idle request queue - 0x%08lX",
+            "Error creating WDF idle request queue - 0x%08lX", 
             status);
 
         goto exit;
@@ -288,6 +291,38 @@ Return Value:
         goto exit;
     }
 
+    //
+    // Initialize driver path for self-test
+    //
+    status = TchSelfTestInitialize(fxDevice);
+
+    if (!NT_SUCCESS(status))
+    {
+        Trace(
+            TRACE_LEVEL_ERROR,
+            TRACE_INIT,
+            "Error initializing self-test functionality - %!STATUS!",
+            status);
+
+        goto exit;
+    }
+
+    //
+    // Initialize driver path for self-test
+    //
+    status = TchEnoSelfTestInitialize(fxDevice);
+
+    if (!NT_SUCCESS(status))
+    {
+        Trace(
+            TRACE_LEVEL_ERROR,
+            TRACE_INIT,
+            "Error initializing Eno self-test functionality - %!STATUS!",
+            status);
+
+        goto exit;
+    }
+
 exit:
 
     return status;
@@ -296,7 +331,7 @@ exit:
 VOID
 OnContextCleanup(
     IN WDFOBJECT Driver
-)
+    )
 /*++
 Routine Description:
 

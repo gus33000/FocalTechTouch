@@ -1,6 +1,8 @@
 /*++
 	Copyright (c) Microsoft Corporation. All Rights Reserved.
-	Sample code. Dealpoint ID #843729.
+	Copyright (c) Bingxing Wang. All Rights Reserved.
+	Copyright (c) Roman Masanin. All Rights Reserved.
+	Copyright (c) LumiaWoA authors. All Rights Reserved.
 
 	Module Name:
 
@@ -18,64 +20,34 @@
 
 --*/
 
+#include <Cross Platform Shim\compat.h>
 #include <internal.h>
 #include <controller.h>
-#include <config.h>
+#include <ft5x\ftinternal.h>
 #include <hid.h>
-//#include <debug.h>
-#include <hidCommon.h>
-#include <ftinternal.h>
 #include <hid.tmh>
+
+const USHORT gOEMVendorID = 0x6674;    // "ft"
+const USHORT gOEMProductID = 0x3578;    // "5x"
+const USHORT gOEMVersionID = 3200;
+
+const PWSTR gpwstrManufacturerID = L"FocalTech";
+const PWSTR gpwstrProductID = L"5x06";
+const PWSTR gpwstrSerialNumber = L"5x06";
 
 //
 // HID Report Descriptor for a touch device
 //
+
 const UCHAR gReportDescriptor[] = {
-	FOCALTECH_TOUCH_DIGITIZER_COLLECTION,
-
-	USAGE, 0x0E,                            // USAGE (Configuration)
-	BEGIN_COLLECTION, 0x01,                 // COLLECTION (Application)
-		REPORT_ID, REPORTID_FEATURE,            //   REPORT_ID (Feature)
-		USAGE, 0x22,                            //   USAGE (Finger)
-		BEGIN_COLLECTION, 0x00,                 //   COLLECTION (physical)
-			USAGE, 0x52,                            //     USAGE (Input Mode)
-			USAGE, 0x53,                            //     USAGE (Device Index)
-			LOGICAL_MINIMUM, 0x00,                  //     LOGICAL_MINIMUM (0)
-			LOGICAL_MAXIMUM, 0x0a,                  //     LOGICAL_MAXIMUM (10)
-			REPORT_SIZE, 0x08,                      //     REPORT_SIZE (8)
-			REPORT_COUNT, 0x02,                     //     REPORT_COUNT (2)
-			FEATURE, 0x02,                          //     FEATURE (Data,Var,Abs)
-		END_COLLECTION,                         //   END_COLLECTION
-	END_COLLECTION,                         // END_COLLECTION
-
-#ifdef HID_MOUSE_PATH_SUPPORT
-	USAGE_PAGE, 0x01,                       // USAGE_PAGE (Generic Desktop)
-	USAGE, 0x02,                            // USAGE (Mouse)
-	BEGIN_COLLECTION, 0x01,                 // COLLECTION (Application)
-		REPORT_ID, REPORTID_MOUSE,              //   REPORT_ID (Mouse)
-		USAGE, 0x01,                            //   USAGE (Pointer)
-		BEGIN_COLLECTION, 0x00,                 //   COLLECTION (Physical)
-			USAGE_PAGE, 0x09,                       //     USAGE_PAGE (Button)
-			0x19, 0x01,                             //     USAGE_MINIMUM (Button 1)
-			0x29, 0x02,                             //     USAGE_MAXIMUM (Button 2)
-			LOGICAL_MINIMUM, 0x00,                  //     LOGICAL_MINIMUM (0)
-			LOGICAL_MAXIMUM, 0x01,                  //     LOGICAL_MAXIMUM (1)
-			REPORT_SIZE, 0x01,                      //     REPORT_SIZE (1)
-			REPORT_COUNT, 0x02,                     //     REPORT_COUNT (2)
-			INPUT, 0x02,                            //       INPUT (Data,Var,Abs)
-			REPORT_COUNT, 0x06,                     //     REPORT_COUNT (6)
-			INPUT, 0x03,                            //       INPUT (Cnst,Var,Abs)
-			USAGE_PAGE, 0x01,                       //     USAGE_PAGE (Generic Desktop)
-			USAGE, 0x30,                            //     USAGE (X)
-			USAGE, 0x31,                            //     USAGE (Y)
-			REPORT_SIZE, 0x10,                      //     REPORT_SIZE (16)
-			REPORT_COUNT, 0x02,                     //     REPORT_COUNT (2)
-			LOGICAL_MINIMUM, 0x00,                  //     LOGICAL_MINIMUM (0)
-			LOGICAL_MAXIMUM_2, 0xff, 0x7f,          //     LOGICAL_MAXIMUM (32767)
-			INPUT, 0x02,                            //       INPUT (Data,Var,Abs)
-		END_COLLECTION,                         //   END_COLLECTION
-	END_COLLECTION,                         // END_COLLECTION
-#endif
+	FOCALTECH_FT5X_DIGITIZER_DIAGNOSTIC1,
+	FOCALTECH_FT5X_DIGITIZER_DIAGNOSTIC2,
+	FOCALTECH_FT5X_DIGITIZER_DIAGNOSTIC3,
+	FOCALTECH_FT5X_DIGITIZER_DIAGNOSTIC4,
+	FOCALTECH_FT5X_DIGITIZER_FINGER,
+	FOCALTECH_FT5X_DIGITIZER_REPORTMODE,
+	FOCALTECH_FT5X_DIGITIZER_KEYPAD,
+	FOCALTECH_FT5X_DIGITIZER_STYLUS
 };
 const ULONG gdwcbReportDescriptor = sizeof(gReportDescriptor);
 
@@ -96,105 +68,165 @@ const HID_DESCRIPTOR gHidDescriptor =
 };
 
 NTSTATUS
-TchGenerateHidReportDescriptor
-(
-	IN PDEVICE_EXTENSION Context,
-	IN WDFMEMORY outMemory
+TchSendReport(
+	IN WDFQUEUE PingPongQueue,
+	IN PHID_INPUT_REPORT hidReportFromDriver
 )
 {
-	NTSTATUS status = 0;
-	FT5X_CONTROLLER_CONTEXT* touchContext = (FT5X_CONTROLLER_CONTEXT*)Context->TouchContext;
+	NTSTATUS status;
+	WDFREQUEST request;
+	PHID_INPUT_REPORT hidReportRequestBuffer;
+	size_t hidReportRequestBufferLength;
 
-	PUCHAR hidReportDescBuffer = (PUCHAR)ExAllocatePoolWithTag(
-		NonPagedPool,
-		gdwcbReportDescriptor,
-		TOUCH_POOL_TAG
-	);
+	status = STATUS_SUCCESS;
+	request = NULL;
 
-	if (hidReportDescBuffer == NULL)
+	switch (hidReportFromDriver->ReportID)
+	{
+	case REPORTID_STYLUS:
+	{
+	Trace(
+		TRACE_LEVEL_INFORMATION,
+		TRACE_HID,
+		"HID pen: "
+		"Tip Switch = %d, "
+		"Barrel Switch = %d, "
+		"Invert = %d, "
+		"Eraser = %d, "
+		"In Range = %d, "
+		"X = %d, "
+		"Y = %d, "
+		"Tip Pressure = %d, "
+		"X Tilt = %d, "
+		"Y Tilt = %d",
+		hidReportFromDriver->PenReport.TipSwitch,
+		hidReportFromDriver->PenReport.BarrelSwitch,
+		hidReportFromDriver->PenReport.Invert,
+		hidReportFromDriver->PenReport.Eraser,
+		hidReportFromDriver->PenReport.InRange,
+		hidReportFromDriver->PenReport.X,
+		hidReportFromDriver->PenReport.Y,
+		hidReportFromDriver->PenReport.TipPressure,
+		hidReportFromDriver->PenReport.XTilt,
+		hidReportFromDriver->PenReport.YTilt);
+	break;
+	}
+	case REPORTID_FINGER:
 	{
 		Trace(
 			TRACE_LEVEL_INFORMATION,
 			TRACE_HID,
-			"Failed to create hidReportDescBuffer on %p",
-			hidReportDescBuffer);
-
-		return STATUS_FATAL_MEMORY_EXHAUSTION;
+			"HID Finger: "
+			"Contact Count = %d\n"
+			"Tip Switch = %d, "
+			"In Range = %d, "
+			"Confidence = %d, "
+			"Contact ID = %d, "
+			"X = %d, "
+			"Y = %d\n"
+			"Tip Switch = %d, "
+			"In Range = %d, "
+			"Confidence = %d, "
+			"Contact ID = %d, "
+			"X = %d, "
+			"Y = %d",
+			hidReportFromDriver->TouchReport.ContactCount,
+			hidReportFromDriver->TouchReport.Contacts[0].TipSwitch,
+			hidReportFromDriver->TouchReport.Contacts[0].InRange,
+			hidReportFromDriver->TouchReport.Contacts[0].Confidence,
+			hidReportFromDriver->TouchReport.Contacts[0].ContactID,
+			hidReportFromDriver->TouchReport.Contacts[0].X,
+			hidReportFromDriver->TouchReport.Contacts[0].Y,
+			hidReportFromDriver->TouchReport.Contacts[1].TipSwitch,
+			hidReportFromDriver->TouchReport.Contacts[1].InRange,
+			hidReportFromDriver->TouchReport.Contacts[1].Confidence,
+			hidReportFromDriver->TouchReport.Contacts[1].ContactID,
+			hidReportFromDriver->TouchReport.Contacts[1].X,
+			hidReportFromDriver->TouchReport.Contacts[1].Y);
+		break;
 	}
-
-	Trace(
-		TRACE_LEVEL_INFORMATION,
-		TRACE_HID,
-		"Created hidReportDescBuffer on %p",
-		hidReportDescBuffer);
-
-	RtlCopyBytes(
-		hidReportDescBuffer,
-		gReportDescriptor,
-		gdwcbReportDescriptor
-	);
-
-	for (unsigned int i = 0; i < gdwcbReportDescriptor - 2; i++)
+	case REPORTID_KEYPAD:
 	{
-		if (*(hidReportDescBuffer + i) == LOGICAL_MAXIMUM_2)
-		{
-			if (*(hidReportDescBuffer + i + 1) == 254 &&
-				*(hidReportDescBuffer + i + 2) == 254)
-			{
-				*(hidReportDescBuffer + i + 1) = touchContext->Props.DisplayPhysicalWidth & 0xff;
-				*(hidReportDescBuffer + i + 2) = (touchContext->Props.DisplayPhysicalWidth >> 8) & 0xff;
-
-				Trace(
-					TRACE_LEVEL_INFORMATION,
-					TRACE_HID,
-					"Set X=%u in %p",
-					touchContext->Props.DisplayPhysicalWidth,
-					hidReportDescBuffer + i);
-			}
-			if (*(hidReportDescBuffer + i + 1) == 253 &&
-				*(hidReportDescBuffer + i + 2) == 253)
-			{
-				*(hidReportDescBuffer + i + 1) = touchContext->Props.DisplayPhysicalHeight & 0xff;
-				*(hidReportDescBuffer + i + 2) = (touchContext->Props.DisplayPhysicalHeight >> 8) & 0xff;
-
-				Trace(
-					TRACE_LEVEL_INFORMATION,
-					TRACE_HID,
-					"Set Y=%u in %p",
-					touchContext->Props.DisplayPhysicalHeight,
-					hidReportDescBuffer + i);
-			}
-		}
+		Trace(
+			TRACE_LEVEL_INFORMATION,
+			TRACE_HID,
+			"HID key: "
+			"System Power Down = %d, "
+			"Start = %d, "
+			"AC Search = %d, "
+			"AC Back = %d",
+			hidReportFromDriver->KeyReport.SystemPowerDown,
+			hidReportFromDriver->KeyReport.Start,
+			hidReportFromDriver->KeyReport.ACSearch,
+			hidReportFromDriver->KeyReport.ACBack);
+	}
 	}
 
-	Trace(
-		TRACE_LEVEL_INFORMATION,
-		TRACE_HID,
-		"Set X=%u and Y=%u in hidReportDescriptor",
-		touchContext->Props.DisplayPhysicalWidth,
-		touchContext->Props.DisplayPhysicalHeight);
-
 	//
-	// Use hardcoded Report descriptor
+	// Complete a HIDClass request if one is available
 	//
-	status = WdfMemoryCopyFromBuffer(
-		outMemory,
-		0,
-		(PVOID)hidReportDescBuffer,
-		gdwcbReportDescriptor);
+	status = WdfIoQueueRetrieveNextRequest(
+		PingPongQueue,
+		&request);
 
 	if (!NT_SUCCESS(status))
 	{
 		Trace(
 			TRACE_LEVEL_ERROR,
-			TRACE_HID,
-			"Error copying HID report descriptor to request memory - STATUS:%X",
+			TRACE_REPORTING,
+			"No request pending from HIDClass, ignoring report - 0x%08lX",
 			status);
+
 		goto exit;
 	}
 
+	//
+	// Validate an output buffer was provided
+	//
+	status = WdfRequestRetrieveOutputBuffer(
+		request,
+		sizeof(HID_INPUT_REPORT),
+		&hidReportRequestBuffer,
+		&hidReportRequestBufferLength);
+
+	if (!NT_SUCCESS(status))
+	{
+		Trace(
+			TRACE_LEVEL_VERBOSE,
+			TRACE_SAMPLES,
+			"Error retrieving HID read request output buffer - 0x%08lX",
+			status);
+	}
+	else
+	{
+		//
+		// Validate the size of the output buffer
+		//
+		if (hidReportRequestBufferLength < sizeof(HID_INPUT_REPORT))
+		{
+			status = STATUS_BUFFER_TOO_SMALL;
+
+			Trace(
+				TRACE_LEVEL_VERBOSE,
+				TRACE_SAMPLES,
+				"Error HID read request buffer is too small (%I64x bytes) - 0x%08lX",
+				hidReportRequestBufferLength,
+				status);
+		}
+		else
+		{
+			RtlCopyMemory(
+				hidReportRequestBuffer,
+				hidReportFromDriver,
+				sizeof(HID_INPUT_REPORT));
+
+			WdfRequestSetInformation(request, sizeof(HID_INPUT_REPORT));
+		}
+	}
+
+	WdfRequestComplete(request, status);
+
 exit:
-	ExFreePoolWithTag((PVOID)hidReportDescBuffer, TOUCH_POOL_TAG);
 	return status;
 }
 
@@ -202,7 +234,7 @@ NTSTATUS
 TchReadReport(
 	IN WDFDEVICE Device,
 	IN WDFREQUEST Request,
-	OUT BOOLEAN* Pending
+	OUT BOOLEAN *Pending
 )
 /*++
 
@@ -232,14 +264,14 @@ Return Value:
 
 	status = WdfRequestForwardToIoQueue(
 		Request,
-		devContext->PingPongQueue);
+		devContext->ReportContext.PingPongQueue);
 
 	if (!NT_SUCCESS(status))
 	{
 		Trace(
 			TRACE_LEVEL_ERROR,
 			TRACE_HID,
-			"Failed to forward HID request to I/O queue - STATUS:%X",
+			"Failed to forward HID request to I/O queue - 0x%08lX",
 			status);
 
 		goto exit;
@@ -256,15 +288,10 @@ Return Value:
 	//
 	if (devContext->ServiceInterruptsAfterD0Entry == TRUE)
 	{
-		HID_INPUT_REPORT* hidReports = NULL;
-        int reportsCount;
-
-			TchServiceInterrupts(
-				devContext->TouchContext,
-				&devContext->I2CContext,
-				devContext->InputMode,
-                &hidReports,
-				&reportsCount);
+		Ft5xServiceInterrupts(
+			devContext->TouchContext,
+			&devContext->I2CContext,
+			&devContext->ReportContext);
 
 		devContext->ServiceInterruptsAfterD0Entry = FALSE;
 	}
@@ -329,7 +356,7 @@ Return Value:
 		break;
 	}
 
-	lenId = strId ? (wcslen(strId) * sizeof(WCHAR) + sizeof(UNICODE_NULL)) : 0;
+	lenId = strId ? (wcslen(strId)*sizeof(WCHAR) + sizeof(UNICODE_NULL)) : 0;
 	if (strId == NULL)
 	{
 		status = STATUS_INVALID_PARAMETER;
@@ -349,10 +376,105 @@ Return Value:
 		Trace(
 			TRACE_LEVEL_ERROR,
 			TRACE_HID,
-			"Error getting device string - STATUS:%X",
+			"Error getting device string - 0x%08lX",
 			status);
 	}
 
+	return status;
+}
+
+NTSTATUS
+TchGenerateHidReportDescriptor(
+	IN WDFDEVICE Device,
+	IN WDFMEMORY Memory
+)
+{
+	PDEVICE_EXTENSION devContext;
+	FT5X_CONTROLLER_CONTEXT* touchContext;
+	NTSTATUS status;
+
+	devContext = GetDeviceContext(Device);
+
+	touchContext = (FT5X_CONTROLLER_CONTEXT*)devContext->TouchContext;
+
+	PUCHAR hidReportDescBuffer = (PUCHAR)ExAllocatePoolWithTag(
+		NonPagedPool,
+		gdwcbReportDescriptor,
+		TOUCH_POOL_TAG
+	);
+
+	if (hidReportDescBuffer == NULL)
+	{
+		Trace(
+			TRACE_LEVEL_INFORMATION,
+			TRACE_HID,
+			"Failed to create hidReportDescBuffer on %p",
+			hidReportDescBuffer);
+
+		return STATUS_FATAL_MEMORY_EXHAUSTION;
+	}
+
+	RtlCopyBytes(
+		hidReportDescBuffer,
+		gReportDescriptor,
+		gdwcbReportDescriptor
+	);
+
+	for (unsigned int i = 0; i < gdwcbReportDescriptor - 2; i++)
+	{
+		if (*(hidReportDescBuffer + i) == LOGICAL_MAXIMUM_2)
+		{
+			if (*(hidReportDescBuffer + i + 1) == 0xFE &&
+				*(hidReportDescBuffer + i + 2) == 0xFE)
+			{
+				*(hidReportDescBuffer + i + 1) = devContext->ReportContext.Props.DisplayPhysicalWidth & 0xFF;
+				*(hidReportDescBuffer + i + 2) = (devContext->ReportContext.Props.DisplayPhysicalWidth >> 8) & 0xFF;
+			}
+			if (*(hidReportDescBuffer + i + 1) == 0xFD &&
+				*(hidReportDescBuffer + i + 2) == 0xFD)
+			{
+				*(hidReportDescBuffer + i + 1) = devContext->ReportContext.Props.DisplayPhysicalHeight & 0xFF;
+				*(hidReportDescBuffer + i + 2) = (devContext->ReportContext.Props.DisplayPhysicalHeight >> 8) & 0xFF;
+			}
+		}
+		else if (*(hidReportDescBuffer + i) == PHYSICAL_MAXIMUM_2)
+		{
+			if (*(hidReportDescBuffer + i + 1) == 0xFE &&
+				*(hidReportDescBuffer + i + 2) == 0xFE)
+			{
+				*(hidReportDescBuffer + i + 1) = devContext->ReportContext.Props.DisplayWidth10um & 0xFF;
+				*(hidReportDescBuffer + i + 2) = (devContext->ReportContext.Props.DisplayWidth10um >> 8) & 0xFF;
+			}
+			if (*(hidReportDescBuffer + i + 1) == 0xFD &&
+				*(hidReportDescBuffer + i + 2) == 0xFD)
+			{
+				*(hidReportDescBuffer + i + 1) = devContext->ReportContext.Props.DisplayHeight10um & 0xFF;
+				*(hidReportDescBuffer + i + 2) = (devContext->ReportContext.Props.DisplayHeight10um >> 8) & 0xFF;
+			}
+		}
+	}
+
+	//
+	// Use hardcoded Report descriptor
+	//
+	status = WdfMemoryCopyFromBuffer(
+		Memory,
+		0,
+		(PVOID)hidReportDescBuffer,
+		gdwcbReportDescriptor);
+
+	if (!NT_SUCCESS(status))
+	{
+		Trace(
+			TRACE_LEVEL_ERROR,
+			TRACE_HID,
+			"Error copying HID report descriptor to request memory - STATUS:%X",
+			status);
+		goto exit;
+	}
+
+exit:
+	ExFreePoolWithTag((PVOID)hidReportDescBuffer, TOUCH_POOL_TAG);
 	return status;
 }
 
@@ -387,7 +509,7 @@ Return Value:
 
 	//
 	// This IOCTL is METHOD_NEITHER so WdfRequestRetrieveOutputMemory
-	// will correctly retrieve buffer from Irp->UserBuffer.
+	// will correctly retrieve buffer from Irp->UserBuffer. 
 	// Remember that HIDCLASS provides the buffer in the Irp->UserBuffer
 	// field irrespective of the ioctl buffer type. However, framework is very
 	// strict about type checking. You cannot get Irp->UserBuffer by using
@@ -401,7 +523,7 @@ Return Value:
 		Trace(
 			TRACE_LEVEL_ERROR,
 			TRACE_HID,
-			"Error getting HID descriptor request memory - STATUS:%X",
+			"Error getting HID descriptor request memory - 0x%08lX",
 			status);
 		goto exit;
 	}
@@ -412,7 +534,7 @@ Return Value:
 	status = WdfMemoryCopyFromBuffer(
 		memory,
 		0,
-		(PUCHAR)&gHidDescriptor,
+		(PUCHAR) &gHidDescriptor,
 		sizeof(gHidDescriptor));
 
 	if (!NT_SUCCESS(status))
@@ -420,7 +542,7 @@ Return Value:
 		Trace(
 			TRACE_LEVEL_ERROR,
 			TRACE_HID,
-			"Error copying HID descriptor to request memory - STATUS:%X",
+			"Error copying HID descriptor to request memory - 0x%08lX",
 			status);
 		goto exit;
 	}
@@ -465,11 +587,9 @@ Return Value:
 	WDFMEMORY memory;
 	NTSTATUS status;
 
-	UNREFERENCED_PARAMETER(Device);
-
 	//
 	// This IOCTL is METHOD_NEITHER so WdfRequestRetrieveOutputMemory
-	// will correctly retrieve buffer from Irp->UserBuffer.
+	// will correctly retrieve buffer from Irp->UserBuffer. 
 	// Remember that HIDCLASS provides the buffer in the Irp->UserBuffer
 	// field irrespective of the ioctl buffer type. However, framework is very
 	// strict about type checking. You cannot get Irp->UserBuffer by using
@@ -483,16 +603,26 @@ Return Value:
 		Trace(
 			TRACE_LEVEL_ERROR,
 			TRACE_HID,
-			"Error getting HID report descriptor request memory - STATUS:%X",
+			"Error getting HID report descriptor request memory - 0x%08lX",
 			status);
 		goto exit;
 	}
 
-	PDEVICE_EXTENSION devCtx = GetDeviceContext(Device);
+	//
+	// Use hardcoded Report descriptor
+	//
+	status = TchGenerateHidReportDescriptor(
+		Device,
+		memory
+	);
 
-	status = TchGenerateHidReportDescriptor(devCtx, memory);
 	if (!NT_SUCCESS(status))
 	{
+		Trace(
+			TRACE_LEVEL_ERROR,
+			TRACE_HID,
+			"Error copying HID report descriptor to request memory - 0x%08lX",
+			status);
 		goto exit;
 	}
 
@@ -531,7 +661,7 @@ Return Value:
 
 	//
 	// This IOCTL is METHOD_NEITHER so WdfRequestRetrieveOutputMemory
-	// will correctly retrieve buffer from Irp->UserBuffer.
+	// will correctly retrieve buffer from Irp->UserBuffer. 
 	// Remember that HIDCLASS provides the buffer in the Irp->UserBuffer
 	// field irrespective of the ioctl buffer type. However, framework is very
 	// strict about type checking. You cannot get Irp->UserBuffer by using
@@ -540,7 +670,7 @@ Return Value:
 	//
 	status = WdfRequestRetrieveOutputBuffer(
 		Request,
-		sizeof(HID_DEVICE_ATTRIBUTES),
+		sizeof (HID_DEVICE_ATTRIBUTES),
 		&deviceAttributes,
 		NULL);
 
@@ -549,12 +679,12 @@ Return Value:
 		Trace(
 			TRACE_LEVEL_ERROR,
 			TRACE_HID,
-			"Error retrieving device attribute output buffer - STATUS:%X",
+			"Error retrieving device attribute output buffer - 0x%08lX",
 			status);
 		goto exit;
 	}
 
-	deviceAttributes->Size = sizeof(HID_DEVICE_ATTRIBUTES);
+	deviceAttributes->Size = sizeof (HID_DEVICE_ATTRIBUTES);
 	deviceAttributes->VendorID = gOEMVendorID;
 	deviceAttributes->ProductID = gOEMProductID;
 	deviceAttributes->VersionNumber = gOEMVersionID;
@@ -562,7 +692,7 @@ Return Value:
 	//
 	// Report how many bytes were copied
 	//
-	WdfRequestSetInformation(Request, sizeof(HID_DEVICE_ATTRIBUTES));
+	WdfRequestSetInformation(Request, sizeof (HID_DEVICE_ATTRIBUTES));
 
 exit:
 
@@ -614,7 +744,7 @@ Return Value:
 	}
 
 	featurePacket =
-		(PHID_XFER_PACKET)WdfRequestWdmGetIrp(Request)->UserBuffer;
+		(PHID_XFER_PACKET) WdfRequestWdmGetIrp(Request)->UserBuffer;
 
 	if (featurePacket == NULL)
 	{
@@ -628,34 +758,59 @@ Return Value:
 
 	switch (*(PUCHAR)featurePacket->reportBuffer)
 	{
-	case REPORTID_FEATURE:
+	case REPORTID_REPORTMODE:
 	{
-		PHID_FEATURE_REPORT inputModeReport =
-			(PHID_FEATURE_REPORT)featurePacket->reportBuffer;
+		Trace(
+			TRACE_LEVEL_INFORMATION,
+			TRACE_DRIVER,
+			"%!FUNC! Report REPORTID_REPORTMODE is requested"
+		);
 
-		if (featurePacket->reportBufferLen < sizeof(HID_FEATURE_REPORT))
+		PPTP_DEVICE_INPUT_MODE_REPORT DeviceInputMode = (PPTP_DEVICE_INPUT_MODE_REPORT) featurePacket->reportBuffer;
+		switch (DeviceInputMode->Mode)
 		{
-			status = STATUS_BUFFER_TOO_SMALL;
-			goto exit;
+		case PTP_COLLECTION_MOUSE:
+		{
+			Trace(
+				TRACE_LEVEL_INFORMATION,
+				TRACE_DRIVER,
+				"%!FUNC! Report REPORTID_REPORTMODE requested Mouse Input"
+			);
+
+			devContext->PtpInputOn = FALSE;
+			break;
+		}
+		case PTP_COLLECTION_WINDOWS:
+		{
+
+			Trace(
+				TRACE_LEVEL_INFORMATION,
+				TRACE_DRIVER,
+				"%!FUNC! Report REPORTID_REPORTMODE requested Windows PTP Input"
+			);
+
+			devContext->PtpInputOn = TRUE;
+			break;
+		}
 		}
 
-		if ((inputModeReport->InputMode == MODE_MOUSE) ||
-			(inputModeReport->InputMode == MODE_MULTI_TOUCH))
-		{
-			devContext->InputMode = inputModeReport->InputMode;
-		}
-		else
-		{
-			status = STATUS_INVALID_PARAMETER;
-			goto exit;
-		}
-
+		Trace(
+			TRACE_LEVEL_INFORMATION,
+			TRACE_DRIVER,
+			"%!FUNC! Report REPORTID_REPORTMODE is fulfilled"
+		);
 		break;
 	}
-
 	default:
 	{
-		status = STATUS_INVALID_PARAMETER;
+		Trace(
+			TRACE_LEVEL_INFORMATION,
+			TRACE_DRIVER,
+			"%!FUNC! Unsupported type %d is requested",
+			featurePacket->reportId
+		);
+
+		status = STATUS_NOT_SUPPORTED;
 		goto exit;
 	}
 	}
@@ -691,6 +846,7 @@ Return Value:
 	PHID_XFER_PACKET featurePacket;
 	WDF_REQUEST_PARAMETERS params;
 	NTSTATUS status;
+	size_t ReportSize;
 
 	devContext = GetDeviceContext(Device);
 	status = STATUS_SUCCESS;
@@ -710,7 +866,7 @@ Return Value:
 	}
 
 	featurePacket =
-		(PHID_XFER_PACKET)WdfRequestWdmGetIrp(Request)->UserBuffer;
+		(PHID_XFER_PACKET) WdfRequestWdmGetIrp(Request)->UserBuffer;
 
 	if (featurePacket == NULL)
 	{
@@ -724,49 +880,128 @@ Return Value:
 
 	switch (*(PUCHAR)featurePacket->reportBuffer)
 	{
-	case REPORTID_FEATURE:
+	case REPORTID_DEVICE_CAPS:
 	{
-		PHID_FEATURE_REPORT inputModeReport =
-			(PHID_FEATURE_REPORT)featurePacket->reportBuffer;
+		Trace(
+			TRACE_LEVEL_INFORMATION,
+			TRACE_DRIVER,
+			"%!FUNC! Report REPORTID_DEVICE_CAPS is requested"
+		);
 
-		if (featurePacket->reportBufferLen < sizeof(HID_FEATURE_REPORT))
-		{
-			status = STATUS_BUFFER_TOO_SMALL;
+		// Size sanity check
+		ReportSize = sizeof(PTP_DEVICE_CAPS_FEATURE_REPORT);
+		if (featurePacket->reportBufferLen < ReportSize) {
+			status = STATUS_INVALID_BUFFER_SIZE;
+			Trace(
+				TRACE_LEVEL_ERROR,
+				TRACE_DRIVER,
+				"%!FUNC! Report buffer is too small"
+			);
 			goto exit;
 		}
 
-		inputModeReport->InputMode = devContext->InputMode;
+		PPTP_DEVICE_CAPS_FEATURE_REPORT capsReport = (PPTP_DEVICE_CAPS_FEATURE_REPORT) featurePacket->reportBuffer;
+
+		capsReport->MaximumContactPoints = PTP_MAX_CONTACT_POINTS;
+		capsReport->ReportID = REPORTID_DEVICE_CAPS;
+
+		if (devContext->TouchContext != NULL && ((FT5X_CONTROLLER_CONTEXT*)devContext->TouchContext)->MaxFingers != 0)
+		{
+			capsReport->MaximumContactPoints = ((FT5X_CONTROLLER_CONTEXT*)devContext->TouchContext)->MaxFingers;
+		}
+
+		Trace(
+			TRACE_LEVEL_INFORMATION,
+			TRACE_DRIVER,
+			"%!FUNC! Report REPORTID_DEVICE_CAPS has maximum contact points of %d",
+			capsReport->MaximumContactPoints
+		);
+		Trace(
+			TRACE_LEVEL_INFORMATION,
+			TRACE_DRIVER,
+			"%!FUNC! Report REPORTID_DEVICE_CAPS is fulfilled"
+		);
 
 		break;
 	}
-
-	case REPORTID_MAX_COUNT:
+	case REPORTID_PTPHQA:
 	{
-		PHID_MAX_COUNT_REPORT maxCountReport =
-			(PHID_MAX_COUNT_REPORT)featurePacket->reportBuffer;
+		Trace(
+			TRACE_LEVEL_INFORMATION,
+			TRACE_DRIVER,
+			"%!FUNC! Report REPORTID_PTPHQA is requested"
+		);
 
-		if (featurePacket->reportBufferLen < sizeof(HID_MAX_COUNT_REPORT))
+		// Size sanity check
+		ReportSize = sizeof(PTP_DEVICE_HQA_CERTIFICATION_REPORT);
+		if (featurePacket->reportBufferLen < ReportSize)
 		{
-			status = STATUS_BUFFER_TOO_SMALL;
+			status = STATUS_INVALID_BUFFER_SIZE;
+			Trace(
+				TRACE_LEVEL_ERROR,
+				TRACE_DRIVER,
+				"%!FUNC! Report buffer is too small."
+			);
 			goto exit;
 		}
 
-		maxCountReport->MaxCount = OEM_MAX_TOUCHES;
-		if (devContext->TouchContext != NULL)
-		{
-			FT5X_CONTROLLER_CONTEXT* controllerContext = devContext->TouchContext;
-			if (controllerContext->MaxFingers != 0)
-			{
-				maxCountReport->MaxCount = controllerContext->MaxFingers;
-			}
-		}
+		PPTP_DEVICE_HQA_CERTIFICATION_REPORT certReport = (PPTP_DEVICE_HQA_CERTIFICATION_REPORT) featurePacket->reportBuffer;
+
+		*certReport->CertificationBlob = DEFAULT_PTP_HQA_BLOB;
+		certReport->ReportID = REPORTID_PTPHQA;
+
+		Trace(
+			TRACE_LEVEL_INFORMATION,
+			TRACE_DRIVER,
+			"%!FUNC! Report REPORTID_PTPHQA is fulfilled"
+		);
 
 		break;
 	}
+	case REPORTID_PENHQA:
+	{
+		Trace(
+			TRACE_LEVEL_INFORMATION,
+			TRACE_DRIVER,
+			"%!FUNC! Report REPORTID_PENHQA is requested"
+		);
 
+		// Size sanity check
+		ReportSize = sizeof(PTP_DEVICE_HQA_CERTIFICATION_REPORT);
+		if (featurePacket->reportBufferLen < ReportSize)
+		{
+			status = STATUS_INVALID_BUFFER_SIZE;
+			Trace(
+				TRACE_LEVEL_ERROR,
+				TRACE_DRIVER,
+				"%!FUNC! Report buffer is too small."
+			);
+			goto exit;
+		}
+
+		PPTP_DEVICE_HQA_CERTIFICATION_REPORT certReport = (PPTP_DEVICE_HQA_CERTIFICATION_REPORT)featurePacket->reportBuffer;
+
+		*certReport->CertificationBlob = DEFAULT_PTP_HQA_BLOB;
+		certReport->ReportID = REPORTID_PENHQA;
+
+		Trace(
+			TRACE_LEVEL_INFORMATION,
+			TRACE_DRIVER,
+			"%!FUNC! Report REPORTID_PENHQA is fulfilled"
+		);
+
+		break;
+	}
 	default:
 	{
-		status = STATUS_INVALID_PARAMETER;
+		Trace(
+			TRACE_LEVEL_INFORMATION,
+			TRACE_DRIVER,
+			"%!FUNC! Unsupported type %d is requested",
+			featurePacket->reportId
+		);
+
+		status = STATUS_NOT_SUPPORTED;
 		goto exit;
 	}
 	}

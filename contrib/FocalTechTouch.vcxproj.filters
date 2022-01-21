@@ -4,6 +4,9 @@
     <Filter Include="Source Files">
       <UniqueIdentifier>{f2fa0c72-647d-400d-b18f-95a63aa5eeca}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Cross Platform Shim">
+      <UniqueIdentifier>{5ba863f3-b147-473e-90cd-c58282854fbe}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Resources">
       <UniqueIdentifier>{22e35757-3564-41d1-919f-a3331bc1b341}</UniqueIdentifier>
     </Filter>
@@ -12,6 +15,27 @@
     </Filter>
     <Filter Include="Header Files">
       <UniqueIdentifier>{fb139949-95da-4a79-9f64-ff14ea801e7b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Cross Platform Shim">
+      <UniqueIdentifier>{9686f0d4-e35c-4f82-a1bb-f9e1b58bf934}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\selftest">
+      <UniqueIdentifier>{bbeaca4f-005a-4329-b642-6946e7fce119}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\selftest">
+      <UniqueIdentifier>{78f7e746-a2d4-42d7-8a03-0e5247e4883d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\touch_power">
+      <UniqueIdentifier>{d3ddf542-5d45-45a5-ae69-536980bbcada}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\touch_power">
+      <UniqueIdentifier>{48991f5f-ce72-428a-bb02-7ff9f171fa57}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\ft5x">
+      <UniqueIdentifier>{e315ae58-595b-4761-a85d-b9f815945abc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\ft5x">
+      <UniqueIdentifier>{1a4a2c90-09cc-463b-b270-18cd15f46d6c}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -36,7 +60,7 @@
     <ClCompile Include="..\src\queue.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\report.c">
+    <ClCompile Include="..\src\registry.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\src\resolutions.c">
@@ -44,6 +68,27 @@
     </ClCompile>
     <ClCompile Include="..\src\spb.c">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\Cross Platform Shim\bitops.c">
+      <Filter>Source Files\Cross Platform Shim</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\Cross Platform Shim\hweight.c">
+      <Filter>Source Files\Cross Platform Shim</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\selftest\enoselftest.c">
+      <Filter>Source Files\selftest</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\selftest\selftest.c">
+      <Filter>Source Files\selftest</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\touch_power\touch_power.c">
+      <Filter>Source Files\touch_power</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\report.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\ft5x\ftinternal.c">
+      <Filter>Source Files\ft5x</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -81,20 +126,44 @@
     <ClInclude Include="..\include\resolutions.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\resource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="..\include\spb.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\trace.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\include\HidCommon.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\config.h">
+    <ClInclude Include="..\include\Cross Platform Shim\bitops.h">
+      <Filter>Header Files\Cross Platform Shim</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\Cross Platform Shim\compat.h">
+      <Filter>Header Files\Cross Platform Shim</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\Cross Platform Shim\hweight.h">
+      <Filter>Header Files\Cross Platform Shim</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\selftest\selftest.h">
+      <Filter>Header Files\selftest</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\selftest\enoselftest.h">
+      <Filter>Header Files\selftest</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\touch_power\touch_power.h">
+      <Filter>Header Files\touch_power</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\touch_power\public.h">
+      <Filter>Header Files\touch_power</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\report.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\Include\ftinternal.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\trace.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="..\include\ft5x\ftinternal.h">
+      <Filter>Header Files\ft5x</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

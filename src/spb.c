@@ -1,6 +1,7 @@
 /*++
     Copyright (c) Microsoft Corporation. All Rights Reserved.
-    Sample code. Dealpoint ID #843729.
+    Copyright (c) Bingxing Wang. All Rights Reserved.
+    Copyright (c) LumiaWoA authors. All Rights Reserved.
 
     Module Name:
 
@@ -20,7 +21,7 @@
 
 #include <internal.h>
 #include <controller.h>
-//#include <debug.h>
+#include "spb.h"
 #include <spb.tmh>
 
 #define I2C_VERBOSE_LOGGING 0
@@ -193,10 +194,10 @@ SpbWriteDataSynchronously(
 
 NTSTATUS
 SpbReadDataSynchronously(
-    _In_ SPB_CONTEXT* SpbContext,
-    _In_ UCHAR Address,
+    IN SPB_CONTEXT* SpbContext,
+    IN UCHAR Address,
     _In_reads_bytes_(Length) PVOID Data,
-    _In_ ULONG Length
+    IN ULONG Length
 )
 /*++
 
@@ -283,6 +284,7 @@ SpbReadDataSynchronously(
             (PVOID)buffer,
             Length);
     }
+
 
     status = WdfIoTargetSendReadSynchronously(
         SpbContext->SpbIoTarget,

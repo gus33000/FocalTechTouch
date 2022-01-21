@@ -1,8 +1,9 @@
 /*++
     Copyright (c) Microsoft Corporation. All Rights Reserved.
-    Sample code. Dealpoint ID #843729.
+    Copyright (c) Bingxing Wang. All Rights Reserved.
+    Copyright (c) LumiaWoA authors. All Rights Reserved.
 
-    Module Name:
+    Module Name: 
 
         resolutions.c
 
@@ -20,9 +21,9 @@
 
 --*/
 
-#include <ftinternal.h>
-#include <config.h>
-//#include <debug.h>
+#include <wdm.h>
+#include <controller.h>
+#include <resolutions.h>
 #include <resolutions.tmh>
 
 //
@@ -36,29 +37,22 @@
 
 TOUCH_SCREEN_PROPERTIES gDefaultProperties =
 {
-    0,
-    0,
-    0,
+    0x0,
+    0x0,
+    0x0,
     TOUCH_DEFAULT_RESOLUTION_X,
     TOUCH_DEFAULT_RESOLUTION_Y,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
+    0x0,
     TOUCH_DEFAULT_RESOLUTION_X,
     TOUCH_DEFAULT_RESOLUTION_Y,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
+    0x0,
+    0x0,
+    0x0,
+    0x0,
     TOUCH_DEFAULT_RESOLUTION_X,
-    TOUCH_DEFAULT_RESOLUTION_Y
+    TOUCH_DEFAULT_RESOLUTION_Y,
+    0x0,
+    0x0,
 };
 
 
@@ -67,7 +61,7 @@ RTL_QUERY_REGISTRY_TABLE gResParamsRegTable[] =
     {
         NULL, RTL_QUERY_REGISTRY_DIRECT,
         L"TouchSwapAxes",
-        (PVOID)FIELD_OFFSET(TOUCH_SCREEN_PROPERTIES, TouchSwapAxes),
+        (PVOID)(FIELD_OFFSET(TOUCH_SCREEN_PROPERTIES, TouchSwapAxes)),
         REG_DWORD,
         &gDefaultProperties.TouchSwapAxes,
         sizeof(ULONG)
@@ -75,7 +69,7 @@ RTL_QUERY_REGISTRY_TABLE gResParamsRegTable[] =
     {
         NULL, RTL_QUERY_REGISTRY_DIRECT,
         L"TouchInvertXAxis",
-        (PVOID)FIELD_OFFSET(TOUCH_SCREEN_PROPERTIES, TouchInvertXAxis),
+        (PVOID)(FIELD_OFFSET(TOUCH_SCREEN_PROPERTIES, TouchInvertXAxis)),
         REG_DWORD,
         &gDefaultProperties.TouchInvertXAxis,
         sizeof(ULONG)
@@ -83,7 +77,7 @@ RTL_QUERY_REGISTRY_TABLE gResParamsRegTable[] =
     {
         NULL, RTL_QUERY_REGISTRY_DIRECT,
         L"TouchInvertYAxis",
-        (PVOID)FIELD_OFFSET(TOUCH_SCREEN_PROPERTIES, TouchInvertYAxis),
+        (PVOID)(FIELD_OFFSET(TOUCH_SCREEN_PROPERTIES, TouchInvertYAxis)),
         REG_DWORD,
         &gDefaultProperties.TouchInvertYAxis,
         sizeof(ULONG)
@@ -91,7 +85,7 @@ RTL_QUERY_REGISTRY_TABLE gResParamsRegTable[] =
     {
         NULL, RTL_QUERY_REGISTRY_DIRECT,
         L"TouchPhysicalWidth",
-        (PVOID)FIELD_OFFSET(TOUCH_SCREEN_PROPERTIES, TouchPhysicalWidth),
+        (PVOID)(FIELD_OFFSET(TOUCH_SCREEN_PROPERTIES, TouchPhysicalWidth)),
         REG_DWORD,
         &gDefaultProperties.TouchPhysicalWidth,
         sizeof(ULONG)
@@ -99,7 +93,7 @@ RTL_QUERY_REGISTRY_TABLE gResParamsRegTable[] =
     {
         NULL, RTL_QUERY_REGISTRY_DIRECT,
         L"TouchPhysicalHeight",
-        (PVOID)FIELD_OFFSET(TOUCH_SCREEN_PROPERTIES, TouchPhysicalHeight),
+        (PVOID)(FIELD_OFFSET(TOUCH_SCREEN_PROPERTIES, TouchPhysicalHeight)),
         REG_DWORD,
         &gDefaultProperties.TouchPhysicalHeight,
         sizeof(ULONG)
@@ -107,7 +101,7 @@ RTL_QUERY_REGISTRY_TABLE gResParamsRegTable[] =
     {
         NULL, RTL_QUERY_REGISTRY_DIRECT,
         L"TouchPhysicalButtonHeight",
-        (PVOID)FIELD_OFFSET(TOUCH_SCREEN_PROPERTIES, TouchPhysicalButtonHeight),
+        (PVOID)(FIELD_OFFSET(TOUCH_SCREEN_PROPERTIES, TouchPhysicalButtonHeight)),
         REG_DWORD,
         &gDefaultProperties.TouchPhysicalButtonHeight,
         sizeof(ULONG)
@@ -115,7 +109,7 @@ RTL_QUERY_REGISTRY_TABLE gResParamsRegTable[] =
     {
         NULL, RTL_QUERY_REGISTRY_DIRECT,
         L"TouchPillarBoxWidthLeft",
-        (PVOID)FIELD_OFFSET(TOUCH_SCREEN_PROPERTIES, TouchPillarBoxWidthLeft),
+        (PVOID)(FIELD_OFFSET(TOUCH_SCREEN_PROPERTIES, TouchPillarBoxWidthLeft)),
         REG_DWORD,
         &gDefaultProperties.TouchPillarBoxWidthLeft,
         sizeof(ULONG)
@@ -123,7 +117,7 @@ RTL_QUERY_REGISTRY_TABLE gResParamsRegTable[] =
     {
         NULL, RTL_QUERY_REGISTRY_DIRECT,
         L"TouchPillarBoxWidthRight",
-        (PVOID)FIELD_OFFSET(TOUCH_SCREEN_PROPERTIES, TouchPillarBoxWidthRight),
+        (PVOID)(FIELD_OFFSET(TOUCH_SCREEN_PROPERTIES, TouchPillarBoxWidthRight)),
         REG_DWORD,
         &gDefaultProperties.TouchPillarBoxWidthRight,
         sizeof(ULONG)
@@ -131,7 +125,7 @@ RTL_QUERY_REGISTRY_TABLE gResParamsRegTable[] =
     {
         NULL, RTL_QUERY_REGISTRY_DIRECT,
         L"TouchLetterBoxHeightTop",
-        (PVOID)FIELD_OFFSET(TOUCH_SCREEN_PROPERTIES, TouchLetterBoxHeightTop),
+        (PVOID)(FIELD_OFFSET(TOUCH_SCREEN_PROPERTIES, TouchLetterBoxHeightTop)),
         REG_DWORD,
         &gDefaultProperties.TouchLetterBoxHeightTop,
         sizeof(ULONG)
@@ -139,7 +133,7 @@ RTL_QUERY_REGISTRY_TABLE gResParamsRegTable[] =
     {
         NULL, RTL_QUERY_REGISTRY_DIRECT,
         L"TouchLetterBoxHeightBottom",
-        (PVOID)FIELD_OFFSET(TOUCH_SCREEN_PROPERTIES, TouchLetterBoxHeightBottom),
+        (PVOID)(FIELD_OFFSET(TOUCH_SCREEN_PROPERTIES, TouchLetterBoxHeightBottom)),
         REG_DWORD,
         &gDefaultProperties.TouchLetterBoxHeightBottom,
         sizeof(ULONG)
@@ -147,7 +141,7 @@ RTL_QUERY_REGISTRY_TABLE gResParamsRegTable[] =
     {
         NULL, RTL_QUERY_REGISTRY_DIRECT,
         L"DisplayPhysicalWidth",
-        (PVOID)FIELD_OFFSET(TOUCH_SCREEN_PROPERTIES, DisplayPhysicalWidth),
+        (PVOID)(FIELD_OFFSET(TOUCH_SCREEN_PROPERTIES, DisplayPhysicalWidth)),
         REG_DWORD,
         &gDefaultProperties.DisplayPhysicalWidth,
         sizeof(ULONG)
@@ -155,7 +149,7 @@ RTL_QUERY_REGISTRY_TABLE gResParamsRegTable[] =
     {
         NULL, RTL_QUERY_REGISTRY_DIRECT,
         L"DisplayPhysicalHeight",
-        (PVOID)FIELD_OFFSET(TOUCH_SCREEN_PROPERTIES, DisplayPhysicalHeight),
+        (PVOID)(FIELD_OFFSET(TOUCH_SCREEN_PROPERTIES, DisplayPhysicalHeight)),
         REG_DWORD,
         &gDefaultProperties.DisplayPhysicalHeight,
         sizeof(ULONG)
@@ -163,7 +157,7 @@ RTL_QUERY_REGISTRY_TABLE gResParamsRegTable[] =
     {
         NULL, RTL_QUERY_REGISTRY_DIRECT,
         L"DisplayViewableWidth",
-        (PVOID)FIELD_OFFSET(TOUCH_SCREEN_PROPERTIES, DisplayViewableWidth),
+        (PVOID)(FIELD_OFFSET(TOUCH_SCREEN_PROPERTIES, DisplayViewableWidth)),
         REG_DWORD,
         &gDefaultProperties.DisplayViewableWidth,
         sizeof(ULONG)
@@ -171,7 +165,7 @@ RTL_QUERY_REGISTRY_TABLE gResParamsRegTable[] =
     {
         NULL, RTL_QUERY_REGISTRY_DIRECT,
         L"DisplayViewableHeight",
-        (PVOID)FIELD_OFFSET(TOUCH_SCREEN_PROPERTIES, DisplayViewableHeight),
+        (PVOID)(FIELD_OFFSET(TOUCH_SCREEN_PROPERTIES, DisplayViewableHeight)),
         REG_DWORD,
         &gDefaultProperties.DisplayViewableHeight,
         sizeof(ULONG)
@@ -179,7 +173,7 @@ RTL_QUERY_REGISTRY_TABLE gResParamsRegTable[] =
     {
         NULL, RTL_QUERY_REGISTRY_DIRECT,
         L"DisplayPillarBoxWidthLeft",
-        (PVOID)FIELD_OFFSET(TOUCH_SCREEN_PROPERTIES, DisplayPillarBoxWidthLeft),
+        (PVOID)(FIELD_OFFSET(TOUCH_SCREEN_PROPERTIES, DisplayPillarBoxWidthLeft)),
         REG_DWORD,
         &gDefaultProperties.DisplayPillarBoxWidthLeft,
         sizeof(ULONG)
@@ -187,7 +181,7 @@ RTL_QUERY_REGISTRY_TABLE gResParamsRegTable[] =
     {
         NULL, RTL_QUERY_REGISTRY_DIRECT,
         L"DisplayPillarBoxWidthRight",
-        (PVOID)FIELD_OFFSET(TOUCH_SCREEN_PROPERTIES, DisplayPillarBoxWidthRight),
+        (PVOID)(FIELD_OFFSET(TOUCH_SCREEN_PROPERTIES, DisplayPillarBoxWidthRight)),
         REG_DWORD,
         &gDefaultProperties.DisplayPillarBoxWidthRight,
         sizeof(ULONG)
@@ -195,7 +189,7 @@ RTL_QUERY_REGISTRY_TABLE gResParamsRegTable[] =
     {
         NULL, RTL_QUERY_REGISTRY_DIRECT,
         L"DisplayLetterBoxHeightTop",
-        (PVOID)FIELD_OFFSET(TOUCH_SCREEN_PROPERTIES, DisplayLetterBoxHeightTop),
+        (PVOID)(FIELD_OFFSET(TOUCH_SCREEN_PROPERTIES, DisplayLetterBoxHeightTop)),
         REG_DWORD,
         &gDefaultProperties.DisplayLetterBoxHeightTop,
         sizeof(ULONG)
@@ -203,9 +197,25 @@ RTL_QUERY_REGISTRY_TABLE gResParamsRegTable[] =
     {
         NULL, RTL_QUERY_REGISTRY_DIRECT,
         L"DisplayLetterBoxHeightBottom",
-        (PVOID)FIELD_OFFSET(TOUCH_SCREEN_PROPERTIES, DisplayLetterBoxHeightBottom),
+        (PVOID)(FIELD_OFFSET(TOUCH_SCREEN_PROPERTIES, DisplayLetterBoxHeightBottom)),
         REG_DWORD,
         &gDefaultProperties.DisplayLetterBoxHeightBottom,
+        sizeof(ULONG)
+    },
+    {
+        NULL, RTL_QUERY_REGISTRY_DIRECT,
+        L"DisplayHeight10um",
+        (PVOID)(FIELD_OFFSET(TOUCH_SCREEN_PROPERTIES, DisplayHeight10um)),
+        REG_DWORD,
+        &gDefaultProperties.DisplayHeight10um,
+        sizeof(ULONG)
+    },
+    {
+        NULL, RTL_QUERY_REGISTRY_DIRECT,
+        L"DisplayWidth10um",
+        (PVOID)(FIELD_OFFSET(TOUCH_SCREEN_PROPERTIES, DisplayWidth10um)),
+        REG_DWORD,
+        &gDefaultProperties.DisplayWidth10um,
         sizeof(ULONG)
     },
     //
@@ -222,8 +232,8 @@ RTL_QUERY_REGISTRY_TABLE gResParamsRegTable[] =
 };
 
 static const ULONG gcbRegistryTable = sizeof(gResParamsRegTable);
-static const ULONG gcRegistryTable =
-sizeof(gResParamsRegTable) / sizeof(gResParamsRegTable[0]);
+static const ULONG gcRegistryTable = 
+    sizeof(gResParamsRegTable) / sizeof(gResParamsRegTable[0]);
 
 
 VOID
@@ -231,9 +241,9 @@ TchTranslateToDisplayCoordinates(
     IN PUSHORT PX,
     IN PUSHORT PY,
     IN PTOUCH_SCREEN_PROPERTIES Props
-)
+    )
 /*++
-
+ 
   Routine Description:
 
     This routine performs translations on touch coordinates
@@ -258,8 +268,8 @@ TchTranslateToDisplayCoordinates(
     //
     // Avoid overflow
     //
-    X = (ULONG)*PX;
-    Y = (ULONG)*PY;
+    X = (ULONG) *PX;
+    Y = (ULONG) *PY;
 
     //
     // Swap the axes reported by the touch controller if requested
@@ -305,6 +315,16 @@ TchTranslateToDisplayCoordinates(
     {
         X -= Props->TouchPillarBoxWidthLeft;
     }
+
+    if (X >= Props->TouchPhysicalWidth - Props->TouchPillarBoxWidthRight)
+    {
+        X = Props->TouchPhysicalWidth;
+    }
+    else
+    {
+        X += Props->TouchPillarBoxWidthRight;
+    }
+
     if (Y <= Props->TouchLetterBoxHeightTop)
     {
         Y = 0;
@@ -313,22 +333,23 @@ TchTranslateToDisplayCoordinates(
     {
         Y -= Props->TouchLetterBoxHeightTop;
     }
-    if (X >= Props->TouchAdjustedWidth)
+
+    if (Y >= Props->TouchPhysicalHeight - Props->TouchLetterBoxHeightBottom)
     {
-        X = Props->TouchAdjustedWidth - 1u;
+        Y = Props->TouchPhysicalHeight;
     }
-    if (Y >= Props->TouchAdjustedHeight)
+    else
     {
-        Y = Props->TouchAdjustedHeight - 1u;
+        Y += Props->TouchLetterBoxHeightBottom;
     }
 
     //
     // Scale the raw touch pixel units into physical display pixels,
     // leaving off the capacitive button region.
     //
-    X = X * Props->DisplayPhysicalWidth / Props->TouchAdjustedWidth;
-    Y = Y * Props->DisplayPhysicalHeight /
-        (Props->TouchAdjustedHeight - Props->TouchPhysicalButtonHeight);
+    X = X * Props->DisplayPhysicalWidth / Props->TouchPhysicalWidth;
+    Y = Y * Props->DisplayPhysicalHeight / 
+        (Props->TouchPhysicalHeight - Props->TouchPhysicalButtonHeight);
 
     //
     // If the display is additionally being letterboxed or pillarboxed, make
@@ -342,6 +363,16 @@ TchTranslateToDisplayCoordinates(
     {
         X -= Props->DisplayPillarBoxWidthLeft;
     }
+
+    if (X >= Props->DisplayPhysicalWidth - Props->DisplayPillarBoxWidthRight)
+    {
+        X = Props->DisplayPhysicalWidth;
+    }
+    else
+    {
+        X += Props->DisplayPillarBoxWidthRight;
+    }
+
     if (Y <= Props->DisplayLetterBoxHeightTop)
     {
         Y = 0;
@@ -350,37 +381,26 @@ TchTranslateToDisplayCoordinates(
     {
         Y -= Props->DisplayLetterBoxHeightTop;
     }
-    if (X >= Props->DisplayAdjustedWidth)
+
+    if (Y >= Props->DisplayPhysicalHeight - Props->DisplayLetterBoxHeightBottom)
     {
-        X = Props->DisplayAdjustedWidth - 1u;
+        Y = Props->DisplayPhysicalHeight;
     }
-    if (Y >= Props->DisplayAdjustedHeight)
+    else
     {
-        Y = Props->DisplayAdjustedHeight - 1u;
+        Y += Props->DisplayLetterBoxHeightBottom;
     }
 
-    X = X * Props->DisplayViewableWidth / Props->DisplayAdjustedWidth;
-    Y = Y * Props->DisplayViewableHeight /
-        (Props->DisplayAdjustedHeight - Props->DisplayAdjustedButtonHeight);
-
-#ifdef COORDS_DEBUG	
-    Trace(
-        TRACE_LEVEL_INFORMATION,
-        TRACE_REPORTING,
-        "In (%d,%d), Out (%d,%d)",
-        *PX, *PY, X, Y);
-#endif
-
-    *PX = (USHORT)X;
-    *PY = (USHORT)Y;
+    *PX = (USHORT) X;
+    *PY = (USHORT) Y;
 }
 
 VOID
 TchGetScreenProperties(
     IN PTOUCH_SCREEN_PROPERTIES Props
-)
+    )
 /*++
-
+ 
   Routine Description:
 
     This routine retrieves coordinate translation settings
@@ -404,10 +424,10 @@ TchGetScreenProperties(
 
     //
     // Table passed to RtlQueryRegistryValues must be allocated 
-    // from NonPagedPool
+    // from NonPagedPoolNx
     //
     regTable = ExAllocatePoolWithTag(
-        NonPagedPool,
+        NonPagedPoolNx,
         gcbRegistryTable,
         TOUCH_POOL_TAG);
 
@@ -424,11 +444,11 @@ TchGetScreenProperties(
     //
     // Update offset values with base pointer
     // 
-    for (i = 0; i < gcRegistryTable - 1; i++)
+    for (i=0; i < gcRegistryTable-1; i++)
     {
-        regTable[i].EntryContext = (PVOID)(
-            ((SIZE_T)regTable[i].EntryContext) +
-            ((ULONG_PTR)Props));
+        regTable[i].EntryContext = (PVOID) (
+            ((SIZE_T) regTable[i].EntryContext) +
+            ((ULONG_PTR) Props));
     }
 
     //
@@ -459,43 +479,10 @@ TchGetScreenProperties(
     }
 
     //
-    // Assign a sane value if we couldn't retrieve settings properly
-    //
-    if (Props->DisplayPhysicalWidth == 254)
-    {
-        Props->DisplayPhysicalWidth = 800;
-    }
-    if (Props->DisplayPhysicalHeight == 253)
-    {
-        Props->DisplayPhysicalHeight = 1280;
-    }
-
-    //
-    // If both values are still the default, take the physical values
-    //
-    if (Props->TouchPhysicalWidth == 254)
-    {
-        Props->TouchPhysicalWidth = Props->DisplayPhysicalWidth;
-    }
-    if (Props->DisplayPhysicalHeight == 253)
-    {
-        Props->TouchPhysicalHeight = Props->DisplayPhysicalHeight;
-    }
-
-    if (Props->DisplayViewableWidth == 254)
-    {
-        Props->DisplayViewableWidth = Props->DisplayPhysicalWidth;
-    }
-    if (Props->DisplayViewableHeight == 253)
-    {
-        Props->DisplayViewableHeight = Props->DisplayPhysicalHeight;
-    }
-
-    //
     // Sanity check values provided from the registry
     //
 
-    if (Props->TouchPillarBoxWidthLeft +
+    if (Props->TouchPillarBoxWidthLeft + 
         Props->TouchPillarBoxWidthRight >=
         Props->TouchPhysicalWidth)
     {
@@ -507,14 +494,14 @@ TchGetScreenProperties(
             Props->TouchPillarBoxWidthRight,
             Props->TouchPhysicalWidth);
 
-        Props->TouchPillarBoxWidthLeft =
+        Props->TouchPillarBoxWidthLeft = 
             gDefaultProperties.TouchPillarBoxWidthLeft;
-        Props->TouchPillarBoxWidthRight =
+        Props->TouchPillarBoxWidthRight = 
             gDefaultProperties.TouchPillarBoxWidthRight;
 
     }
 
-    if (Props->TouchLetterBoxHeightTop +
+    if (Props->TouchLetterBoxHeightTop + 
         Props->TouchLetterBoxHeightBottom >=
         Props->TouchPhysicalHeight)
     {
@@ -526,40 +513,11 @@ TchGetScreenProperties(
             Props->TouchLetterBoxHeightBottom,
             Props->TouchPhysicalHeight);
 
-        Props->TouchLetterBoxHeightTop =
+        Props->TouchLetterBoxHeightTop = 
             gDefaultProperties.TouchLetterBoxHeightTop;
-        Props->TouchLetterBoxHeightBottom =
+        Props->TouchLetterBoxHeightBottom = 
             gDefaultProperties.TouchLetterBoxHeightBottom;
     }
-
-    //
-    // Calculate a few parameters for later use
-    //
-    Props->TouchAdjustedWidth =
-        Props->TouchPhysicalWidth -
-        Props->TouchPillarBoxWidthLeft -
-        Props->TouchPillarBoxWidthRight;
-
-    Props->TouchAdjustedHeight =
-        Props->TouchPhysicalHeight -
-        Props->TouchLetterBoxHeightTop -
-        Props->TouchLetterBoxHeightBottom;
-
-    Props->DisplayAdjustedWidth =
-        Props->DisplayPhysicalWidth -
-        Props->DisplayPillarBoxWidthLeft -
-        Props->DisplayPillarBoxWidthRight;
-
-    Props->DisplayAdjustedButtonHeight =
-        Props->TouchPhysicalButtonHeight *
-        Props->DisplayPhysicalHeight /
-        (Props->TouchAdjustedHeight - Props->TouchPhysicalButtonHeight);
-
-    Props->DisplayAdjustedHeight =
-        Props->DisplayPhysicalHeight -
-        Props->DisplayLetterBoxHeightTop -
-        Props->DisplayLetterBoxHeightBottom +
-        Props->DisplayAdjustedButtonHeight;
 
     if (regTable != NULL)
     {

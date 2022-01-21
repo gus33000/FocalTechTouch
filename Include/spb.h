@@ -1,8 +1,8 @@
 /*++
-    Copyright (c) Microsoft Corporation. All Rights Reserved.
+    Copyright (c) Microsoft Corporation. All Rights Reserved. 
     Sample code. Dealpoint ID #843729.
 
-    Module Name:
+    Module Name: 
 
         spb.h
 
@@ -11,7 +11,7 @@
         This module contains the touch driver I2C helper definitions.
 
     Environment:
-
+ 
         Kernel Mode
 
     Revision History:
@@ -38,30 +38,30 @@ typedef struct _SPB_CONTEXT
     WDFWAITLOCK SpbLock;
 } SPB_CONTEXT;
 
-NTSTATUS
+NTSTATUS 
 SpbReadDataSynchronously(
-    _In_ SPB_CONTEXT* SpbContext,
+    _In_ SPB_CONTEXT *SpbContext,
     _In_ UCHAR Address,
     _In_reads_bytes_(Length) PVOID Data,
     _In_ ULONG Length
-);
+    );
 
 VOID
 SpbTargetDeinitialize(
     IN WDFDEVICE FxDevice,
-    IN SPB_CONTEXT* SpbContext
-);
+    IN SPB_CONTEXT *SpbContext
+    );
 
 NTSTATUS
 SpbTargetInitialize(
     IN WDFDEVICE FxDevice,
-    IN SPB_CONTEXT* SpbContext
-);
+    IN SPB_CONTEXT *SpbContext
+    );
 
 NTSTATUS
 SpbWriteDataSynchronously(
-    IN SPB_CONTEXT* SpbContext,
+    IN SPB_CONTEXT *SpbContext,
     IN UCHAR Address,
     IN PVOID Data,
     IN ULONG Length
-);
+    );

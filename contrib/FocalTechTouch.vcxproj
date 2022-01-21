@@ -35,13 +35,14 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{37D98EC8-0F81-4F96-9DBD-223495C3F611}</ProjectGuid>
+    <ProjectGuid>{1E12CAAD-D041-4C21-B673-6FF831FC3D70}</ProjectGuid>
     <RootNamespace>$(MSBuildProjectName)</RootNamespace>
     <KMDF_VERSION_MAJOR>1</KMDF_VERSION_MAJOR>
     <Configuration Condition="'$(Configuration)' == ''">Debug</Configuration>
     <Platform Condition="'$(Platform)' == ''">Win32</Platform>
     <SampleGuid>{25B3301B-A9D9-4EE3-8EA5-B1F1FBB3A18C}</SampleGuid>
-    <WindowsTargetPlatformVersion>10.0.20313.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.22000.0</WindowsTargetPlatformVersion>
+    <ProjectName>FocalTechTouch</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -413,34 +414,49 @@
     <FilesToPackage Include="$(TargetPath)" Condition="'$(ConfigurationType)'=='Driver' or '$(ConfigurationType)'=='DynamicLibrary'" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\init.c" />
-    <ClCompile Include="..\src\power.c" />
+    <ClCompile Include="..\src\Cross Platform Shim\bitops.c" />
+    <ClCompile Include="..\src\Cross Platform Shim\hweight.c" />
     <ClCompile Include="..\src\report.c" />
-    <ClCompile Include="..\src\resolutions.c" />
+    <ClCompile Include="..\src\touch_power\touch_power.c" />
+    <ClCompile Include="..\src\selftest\selftest.c" />
+    <ClCompile Include="..\src\selftest\enoselftest.c" />
     <ClCompile Include="..\src\device.c" />
     <ClCompile Include="..\src\driver.c" />
     <ClCompile Include="..\src\hid.c" />
     <ClCompile Include="..\src\idle.c" />
+    <ClCompile Include="..\src\init.c" />
+    <ClCompile Include="..\src\power.c" />
     <ClCompile Include="..\src\queue.c" />
+    <ClCompile Include="..\src\registry.c" />
+    <ClCompile Include="..\src\resolutions.c" />
     <ClCompile Include="..\src\spb.c" />
+    <ClCompile Include="..\src\ft5x\ftinternal.c" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\src\Resource.rc" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\include\config.h" />
+    <ClInclude Include="..\include\Cross Platform Shim\bitops.h" />
+    <ClInclude Include="..\include\Cross Platform Shim\compat.h" />
+    <ClInclude Include="..\include\Cross Platform Shim\hweight.h" />
+    <ClInclude Include="..\include\report.h" />
+    <ClInclude Include="..\include\touch_power\public.h" />
+    <ClInclude Include="..\include\touch_power\touch_power.h" />
+    <ClInclude Include="..\include\selftest\enoselftest.h" />
+    <ClInclude Include="..\include\selftest\selftest.h" />
     <ClInclude Include="..\include\controller.h" />
-    <ClInclude Include="..\Include\ftinternal.h" />
-    <ClInclude Include="..\include\spb.h" />
-    <ClInclude Include="..\include\resolutions.h" />
     <ClInclude Include="..\include\device.h" />
     <ClInclude Include="..\include\driver.h" />
     <ClInclude Include="..\include\hid.h" />
-    <ClInclude Include="..\include\hidCommon.h" />
+    <ClInclude Include="..\include\HidCommon.h" />
     <ClInclude Include="..\include\idle.h" />
     <ClInclude Include="..\include\internal.h" />
     <ClInclude Include="..\include\queue.h" />
+    <ClInclude Include="..\include\resolutions.h" />
+    <ClInclude Include="..\include\resource.h" />
+    <ClInclude Include="..\include\spb.h" />
     <ClInclude Include="..\include\trace.h" />
+    <ClInclude Include="..\include\ft5x\ftinternal.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

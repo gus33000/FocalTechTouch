@@ -1,20 +1,20 @@
 /*++
-	Copyright (c) Microsoft Corporation. All Rights Reserved.
-	Sample code. Dealpoint ID #843729.
+    Copyright (c) Microsoft Corporation. All Rights Reserved. 
+    Sample code. Dealpoint ID #843729.
 
-	Module Name:
+    Module Name:
 
-		device.h
+        device.h
 
-	Abstract:
+    Abstract:
 
-		Declarations of WDF device specific entry points
+        Declarations of WDF device specific entry points
 
-	Environment:
+    Environment:
 
-		Kernel mode
+        Kernel mode
 
-	Revision History:
+    Revision History:
 
 --*/
 

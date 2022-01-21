@@ -1,20 +1,20 @@
 /*++
-	Copyright (c) Microsoft Corporation. All Rights Reserved.
-	Sample code. Dealpoint ID #843729.
+    Copyright (c) Microsoft Corporation. All Rights Reserved. 
+    Sample code. Dealpoint ID #843729.
 
-	Module Name:
+    Module Name:
 
-		driver.h
+        driver.h
 
-	Abstract:
+    Abstract:
 
-		Contains WDF driver-specific function declarations
+        Contains WDF driver-specific function declarations
 
-	Environment:
+    Environment:
 
-		Kernel mode
+        Kernel mode
 
-	Revision History:
+    Revision History:
 
 --*/
 
@@ -26,4 +26,3 @@ DRIVER_INITIALIZE DriverEntry;
 EVT_WDF_DEVICE_CONTEXT_CLEANUP OnContextCleanup;
 
 EVT_WDF_DRIVER_DEVICE_ADD OnDeviceAdd;
-

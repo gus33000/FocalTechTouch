@@ -58,4 +58,4 @@
 //
 
 //#define Trace(LEVEL, FLAGS, MSG, ...) \
-//    DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_ERROR_LEVEL, "SynapticsTouch: " MSG "\n", __VA_ARGS__);
+//    DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_ERROR_LEVEL, "FocalTechTouch: " MSG "\n", __VA_ARGS__);
