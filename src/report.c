@@ -28,6 +28,10 @@
 #include <report.h>
 #include <report.tmh>
 
+WDFTIMER  timerHandle;
+PREPORT_CONTEXT cachedReportContext = NULL;
+DETECTED_OBJECTS objectData;
+
 NTSTATUS
 ReportWakeup(
 	IN PREPORT_CONTEXT ReportContext
@@ -313,7 +317,7 @@ Return Value:
 }
 
 NTSTATUS
-ReportObjects(
+ReportObjectsInternal(
 	IN PREPORT_CONTEXT ReportContext,
 	IN DETECTED_OBJECTS data
 )
@@ -507,4 +511,159 @@ Return Value:
 
 exit:
 	return status;
+}
+
+NTSTATUS
+TchContinuousObjectInterruptServicingEvtTimerFunc(
+	IN WDFTIMER Timer
+)
+{
+	NTSTATUS status = STATUS_SUCCESS;
+
+	Trace(
+            TRACE_LEVEL_ERROR,
+		TRACE_REPORTING,
+		"TchContinuousObjectInterruptServicingEvtTimerFunc ENTRY");
+
+      if (cachedReportContext == NULL)
+      {
+		Trace(
+			TRACE_LEVEL_ERROR,
+			TRACE_REPORTING,
+			"Error while reporting objects - cachedReportContext is NULL");
+
+            WdfTimerStop(Timer, FALSE);
+		goto exit;
+      }
+
+	status = ReportObjectsInternal(
+		cachedReportContext,
+		objectData);
+
+	if (!NT_SUCCESS(status))
+	{
+		Trace(
+			TRACE_LEVEL_ERROR,
+			TRACE_REPORTING,
+			"Error while reporting objects - 0x%08lX",
+			status);
+
+            WdfTimerStop(Timer, FALSE);
+            status = STATUS_SUCCESS;
+		goto exit;
+	}
+
+exit:
+	Trace(
+            TRACE_LEVEL_ERROR,
+		TRACE_REPORTING,
+		"TchContinuousObjectInterruptServicingEvtTimerFunc EXIT - 0x%08lX",
+		status);
+
+	return status;
+}
+
+NTSTATUS
+ReportConfigureContinuousSimulationTimer(
+	IN WDFDEVICE DeviceHandle
+)
+{
+	NTSTATUS status = STATUS_SUCCESS;
+
+	WDF_TIMER_CONFIG  timerConfig;
+	WDF_OBJECT_ATTRIBUTES  timerAttributes;
+
+	WDF_TIMER_CONFIG_INIT(
+      	&timerConfig,
+      	TchContinuousObjectInterruptServicingEvtTimerFunc);
+
+      timerConfig.Period = 50;
+
+      WDF_OBJECT_ATTRIBUTES_INIT(&timerAttributes);
+      timerAttributes.ParentObject = DeviceHandle;
+
+	status = WdfTimerCreate(
+      	&timerConfig,
+      	&timerAttributes,
+      	&timerHandle);
+
+	if (!NT_SUCCESS(status))
+	{
+		Trace(
+			TRACE_LEVEL_ERROR,
+			TRACE_INIT,
+			"Error while creating the WDF timer - 0x%08lX",
+			status);
+
+		goto exit;
+	}
+
+exit:
+	return status;
+}
+
+NTSTATUS
+ReportObjectsContinuous(
+	IN PREPORT_CONTEXT ReportContext,
+	IN DETECTED_OBJECTS data
+)
+{
+      NTSTATUS status = STATUS_SUCCESS;
+
+	Trace(
+            TRACE_LEVEL_ERROR,
+		TRACE_REPORTING,
+		"ReportObjectsContinuous ENTRY");
+
+      WdfTimerStop(timerHandle, TRUE);
+
+      cachedReportContext = ReportContext;
+
+      RtlCopyMemory(&objectData, &data, sizeof(objectData));
+
+	status = ReportObjectsInternal(
+		ReportContext,
+		objectData);
+
+	if (!NT_SUCCESS(status))
+	{
+		Trace(
+			TRACE_LEVEL_VERBOSE,
+			TRACE_SAMPLES,
+			"Error while reporting objects - 0x%08lX",
+			status);
+
+		goto exit;
+	}
+
+	WdfTimerStart(timerHandle, WDF_REL_TIMEOUT_IN_MS(50));
+
+exit:	
+      Trace(
+            TRACE_LEVEL_ERROR,
+		TRACE_REPORTING,
+		"ReportObjectsContinuous EXIT - 0x%08lX",
+		status);
+
+	return status;
+}
+
+NTSTATUS
+ReportObjects(
+	IN PREPORT_CONTEXT ReportContext,
+	IN DETECTED_OBJECTS data
+)
+{
+	if (ReportContext->Props.TouchHardwareLacksContinuousReporting)
+      {
+            return ReportObjectsContinuous(
+		      ReportContext,
+		      data);
+      }
+      else
+      {
+            return ReportObjectsInternal(
+		      ReportContext,
+		      data);
+      }
 }

@@ -53,6 +53,7 @@ TOUCH_SCREEN_PROPERTIES gDefaultProperties =
     TOUCH_DEFAULT_RESOLUTION_Y,
     0x0,
     0x0,
+    0x0
 };
 
 
@@ -216,6 +217,14 @@ RTL_QUERY_REGISTRY_TABLE gResParamsRegTable[] =
         (PVOID)(FIELD_OFFSET(TOUCH_SCREEN_PROPERTIES, DisplayWidth10um)),
         REG_DWORD,
         &gDefaultProperties.DisplayWidth10um,
+        sizeof(ULONG)
+    },
+    {
+        NULL, RTL_QUERY_REGISTRY_DIRECT,
+        L"TouchHardwareLacksContinuousReporting",
+        (PVOID)(FIELD_OFFSET(TOUCH_SCREEN_PROPERTIES, TouchHardwareLacksContinuousReporting)),
+        REG_DWORD,
+        &gDefaultProperties.TouchHardwareLacksContinuousReporting,
         sizeof(ULONG)
     },
     //

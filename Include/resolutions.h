@@ -48,6 +48,7 @@ typedef struct _TOUCH_SCREEN_PROPERTIES
     UINT32 DisplayLetterBoxHeightBottom;
     UINT32 DisplayHeight10um;
     UINT32 DisplayWidth10um;
+    UINT32 TouchHardwareLacksContinuousReporting;
 } TOUCH_SCREEN_PROPERTIES, * PTOUCH_SCREEN_PROPERTIES;
 
 VOID

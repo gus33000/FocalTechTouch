@@ -117,3 +117,8 @@ ReportObjects(
 	IN PREPORT_CONTEXT ReportContext,
 	IN DETECTED_OBJECTS data
 );
+
+NTSTATUS
+ReportConfigureContinuousSimulationTimer(
+	IN WDFDEVICE DeviceHandle
+);

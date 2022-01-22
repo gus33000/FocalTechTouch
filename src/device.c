@@ -29,6 +29,7 @@
 #include <gpio.h>
 #include <device.h>
 #include <ft5x/ftinternal.h>
+#include <report.h>
 #include <touch_power/touch_power.h>
 #include <device.tmh>
 
@@ -469,6 +470,22 @@ OnPrepareHardware(
             TRACE_LEVEL_ERROR,
             TRACE_INIT,
             "Error retrieving controller settings from registry - 0x%08lX",
+            status);
+
+        goto exit;
+    }
+
+    //
+    // Configure the timer for continuous simulation on synaptics hardware that doesn't support it
+    //
+    status = ReportConfigureContinuousSimulationTimer(devContext->FxDevice);
+
+    if (!NT_SUCCESS(status))
+    {
+        Trace(
+            TRACE_LEVEL_ERROR,
+            TRACE_INIT,
+            "Error configuring continuous timer - 0x%08lX",
             status);
 
         goto exit;
